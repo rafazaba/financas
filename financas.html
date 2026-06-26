@@ -1,0 +1,3404 @@
+<!DOCTYPE html>
+<!-- saved from url=(0052)file:///C:/Users/rafaz/Downloads/financas%20(1).html -->
+<html lang="pt-BR"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle Financeiro</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0D1117;
+    --surface:  #161B22;
+    --surface2: #21262D;
+    --border:   #30363D;
+    --text:     #E6EDF3;
+    --muted:    #8B949E;
+    --green:    #10B981;
+    --green2:   #059669;
+    --red:      #EF4444;
+    --red2:     #DC2626;
+    --gold:     #F59E0B;
+    --blue:     #3B82F6;
+    --purple:   #8B5CF6;
+    --mono:     'Roboto Mono', monospace;
+    --sans:     'Inter', sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 52px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    gap: 8px;
+  }
+  .header-brand {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--mono);
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: -0.3px;
+    flex-shrink: 0;
+  }
+  .header-brand .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2s infinite;
+    flex-shrink: 0;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  .header-month {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end;
+  }
+  .header-month select {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); padding: 4px 8px; border-radius: 6px;
+    font-family: var(--sans); font-size: 12px; cursor: pointer;
+    max-width: 100px;
+  }
+  .header-month .btn-sm { font-size: 11px; padding: 4px 8px; }
+  @media(max-width:480px) {
+    .header-brand span { display: none; }
+    .header-month .btn-ghost { display: none; }
+    .header-month select { max-width: 90px; }
+  }
+
+  /* ── NAV TABS ── */
+  .nav {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 4px;
+    display: flex; gap: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav-tab {
+    padding: 11px 12px;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 500;
+    border-bottom: 2px solid transparent;
+    transition: all .15s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .nav-tab:hover { color: var(--text); }
+  .nav-tab.active { color: var(--green); border-bottom-color: var(--green); }
+
+  /* ── LAYOUT ── */
+  .main { padding: 16px; max-width: 1400px; margin: 0 auto; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── CARDS GRID ── */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  @media(min-width:640px) {
+    .cards-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 14px;
+  }
+  .card-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .7px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .card-value {
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    word-break: break-all;
+  }
+  @media(min-width:480px) { .card-value { font-size: 19px; } }
+  .card-sub {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 4px;
+    font-family: var(--mono);
+  }
+  .green { color: var(--green); }
+  .red   { color: var(--red); }
+  .gold  { color: var(--gold); }
+  .blue  { color: var(--blue); }
+
+  /* ── SECTION ── */
+  .section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* ── PROGRESS BAR ── */
+  .month-bar-wrap {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px; margin-bottom: 16px;
+  }
+  .month-bar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .month-bar-title { font-size: 13px; font-weight: 600; }
+  .month-bar-pct { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .month-bar-track { height: 10px; background: var(--surface2); border-radius: 9999px; position: relative; overflow: visible; }
+  .month-bar-fill { height: 100%; border-radius: 9999px; transition: width .4s ease; background: linear-gradient(90deg, var(--green2), var(--green)); position: relative; }
+  .month-bar-now-line { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--gold); border-radius: 2px; }
+  .month-bar-labels { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: var(--muted); font-family: var(--mono); }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  @media(min-width:768px) {
+    .grid-2 { grid-template-columns: 1fr 1fr; gap: 20px; }
+    .grid-3 { grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+  }
+
+  /* ── CHART CONTAINERS ── */
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 14px;
+  }
+  .chart-wrap { position: relative; height: 220px; width: 100%; }
+  .chart-wrap canvas { width: 100% !important; height: 100% !important; }
+  @media(min-width:600px) { .chart-card { padding: 18px 20px; } .chart-wrap { height: 260px; } }
+
+  /* ── DRE / BALANÇO ── */
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge-green { background: rgba(16,185,129,.15); color: var(--green); }
+  .badge-red   { background: rgba(239,68,68,.15);  color: var(--red); }
+  .badge-gold  { background: rgba(245,158,11,.15);  color: var(--gold); }
+  .badge-blue  { background: rgba(59,130,246,.15);  color: var(--blue); }
+  .badge-purple{ background: rgba(139,92,246,.15);  color: var(--purple); }
+
+  /* ── FORMS ── */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    align-items: end;
+  }
+  @media(min-width:600px) {
+    .form-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; }
+  .form-group input, .form-group select, .form-group textarea {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 10px;
+    border-radius: 7px;
+    font-family: var(--sans);
+    font-size: 13px;
+    transition: border-color .15s;
+    width: 100%;
+  }
+  .form-group input:focus, .form-group select:focus {
+    outline: none;
+    border-color: var(--green);
+  }
+  .form-group input[type=number] { font-family: var(--mono); }
+
+  .inline-edit-value {
+    background: transparent;
+    border: 1px solid transparent;
+    color: inherit;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    text-align: right;
+    width: 100px;
+    padding: 4px 6px;
+    border-radius: 6px;
+    transition: all .15s;
+  }
+  .inline-edit-value:hover { border-color: var(--border); background: var(--surface2); }
+  .inline-edit-value:focus { outline: none; border-color: var(--green); background: var(--surface2); }
+  /* remove as setinhas do input number p/ não poluir a tabela */
+  .inline-edit-value::-webkit-outer-spin-button,
+  .inline-edit-value::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .inline-edit-value[type=number] { -moz-appearance: textfield; }
+
+  .btn {
+    padding: 8px 16px;
+    border-radius: 7px;
+    border: none;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .btn-green { background: var(--green); color: #000; }
+  .btn-green:hover { background: var(--green2); }
+  .btn-red { background: rgba(239,68,68,.15); color: var(--red); border: 1px solid rgba(239,68,68,.3); }
+  .btn-red:hover { background: rgba(239,68,68,.25); }
+  .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  .btn-ghost:hover { color: var(--text); border-color: var(--text); }
+  .btn-gold { background: var(--gold); color: #000; }
+  .btn-gold:hover { background: #d9890a; }
+  .btn-sm { padding: 4px 10px; font-size: 11px; }
+
+  .form-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 14px;
+    margin-bottom: 16px;
+  }
+  @media(min-width:600px) { .form-box { padding: 18px 20px; } }
+  .form-box-title {
+    font-size: 13px; font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--text);
+  }
+
+  /* ── TABLES ── */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    background: var(--surface2);
+    padding: 9px 12px;
+    text-align: left;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .7px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+  td { padding: 9px 12px; font-size: 12px; }
+  td.mono { font-family: var(--mono); }
+  .dre-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    gap: 6px;
+  }
+  .dre-row:last-child { border-bottom: none; }
+  .dre-row.indent { padding-left: 24px; color: var(--muted); font-size: 12px; }
+  .dre-row.subtotal { background: var(--surface2); font-weight: 600; }
+  .dre-row.total { background: rgba(16,185,129,.07); font-weight: 700; border-top: 2px solid var(--green); font-size: 14px; }
+  .dre-row.total-red { background: rgba(239,68,68,.07); font-weight: 700; border-top: 2px solid var(--red); font-size: 14px; }
+  .dre-row.section-header { background: var(--surface2); padding: 7px 14px; }
+  .dre-label { flex: 1; min-width: 0; }
+  .dre-val { font-family: var(--mono); font-weight: 500; text-align: right; white-space: nowrap; }
+  .dre-val-planned { font-family: var(--mono); font-size: 11px; color: var(--muted); text-align: right; white-space: nowrap; min-width: 80px; }
+  .dre-val-delta { font-family: var(--mono); font-size: 11px; text-align: right; white-space: nowrap; min-width: 70px; }
+  .dre-col-header { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); text-align: right; white-space: nowrap; }
+  @media(max-width:480px) {
+    .dre-val-planned, .dre-val-delta { display: none; }
+    .dre-row.indent { padding-left: 16px; }
+  }
+
+  .bal-section { margin-bottom: 0; }
+  .bal-header {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .8px; color: var(--muted);
+    padding: 8px 14px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    border-top: 1px solid var(--border);
+  }
+  .bal-header:first-child { border-top: none; }
+
+  /* ── BP: Ativo à esquerda / Passivo (topo) + PL (baixo) à direita ── */
+  .bal-block { display: grid; grid-template-columns: 1fr 1fr; align-items: stretch; }
+  .bal-col-ativo { border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+  .bal-col-ativo .bal-section { flex: 1; display: flex; flex-direction: column; }
+  .bal-col-pp { display: flex; flex-direction: column; }
+  @media(max-width:640px) {
+    .bal-block { grid-template-columns: 1fr; }
+    .bal-col-ativo { border-right: none; }
+  }
+
+  /* ── MISC ── */
+  .empty-state {
+    text-align: center; padding: 40px;
+    color: var(--muted); font-size: 13px;
+  }
+  .tag-select {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;
+  }
+  .tag {
+    padding: 3px 10px; border-radius: 9999px;
+    font-size: 11px; font-weight: 600; cursor: pointer;
+    border: 1px solid transparent; transition: all .1s;
+  }
+  .row-actions { display: flex; gap: 6px; }
+  .separator { height: 20px; }
+
+  /* ── EDITABLE TX TABLE FIELDS ── */
+  .tx-edit-input, .tx-edit-select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 5px 7px;
+    border-radius: 6px;
+    font-family: var(--sans);
+    font-size: 12px;
+    width: 100%;
+    min-width: 110px;
+  }
+  .tx-edit-input:focus, .tx-edit-select:focus { outline: none; border-color: var(--green); }
+  .tx-edit-select { cursor: pointer; }
+  td.tx-cell { min-width: 120px; }
+
+  /* toast */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--surface2); border: 1px solid var(--border);
+    padding: 10px 18px; border-radius: 8px;
+    font-size: 13px; font-weight: 500;
+    opacity: 0; transition: opacity .3s;
+    z-index: 999;
+  }
+  #toast.show { opacity: 1; }
+
+  .scroll-x { overflow-x: auto; }
+
+  /* ── LAUNCH MODAL ── */
+  .launch-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; border-radius: 7px;
+    transition: background .1s; cursor: pointer;
+    margin-bottom: 2px;
+  }
+  .launch-item:hover { background: var(--surface2); }
+  .launch-item input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--green); flex-shrink: 0; cursor: pointer; }
+  .launch-item-desc { flex: 1; font-size: 13px; }
+  .launch-item-day  { font-size: 11px; color: var(--muted); font-family: var(--mono); white-space: nowrap; }
+  .launch-item-val  { font-family: var(--mono); font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .launch-item.already { opacity: .45; }
+  .already-badge { font-size: 10px; padding: 2px 6px; border-radius: 9999px; background: rgba(245,158,11,.15); color: var(--gold); font-weight: 600; }
+
+  /* ── MOBILE GLOBAL ── */
+  @media(max-width:600px) {
+    .main { padding: 10px; }
+    .cards-grid { gap: 8px; }
+    .card { padding: 12px; }
+    .form-box { padding: 12px; }
+    .form-grid { grid-template-columns: 1fr; gap: 8px; }
+    .btn { padding: 9px 14px; font-size: 13px; }
+    .dre-row { padding: 8px 10px; }
+    .dre-row.indent { padding-left: 16px; }
+    td { padding: 8px 10px; }
+    thead th { padding: 8px 10px; }
+  }
+
+  /* ── Google Drive Sync status pill ── */
+  #driveStatus {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 600; padding: 4px 10px;
+    border-radius: 20px; border: 1px solid var(--border);
+    cursor: pointer; transition: all .2s; user-select: none;
+    white-space: nowrap;
+  }
+  #driveStatus.idle    { color: var(--muted); border-color: var(--border); }
+  #driveStatus.ok      { color: var(--green); border-color: rgba(74,222,128,.4); background: rgba(74,222,128,.07); }
+  #driveStatus.saving  { color: var(--gold);  border-color: rgba(245,158,11,.4); background: rgba(245,158,11,.07); }
+  #driveStatus.error   { color: var(--red);   border-color: rgba(239,68,68,.4);  background: rgba(239,68,68,.07); }
+  #driveStatus .dot-pulse {
+    width: 7px; height: 7px; border-radius: 50%; background: currentColor;
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+</style>
+</head>
+<body>
+<!-- Google Identity Services — necessário para login automático quando servido via HTTPS (GitHub Pages) -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<div id="toast" class="">Transação adicionada!</div>
+
+<header class="header">
+  <div class="header-brand">
+    <div class="dot"></div>
+    <span>Controle Financeiro</span>
+  </div>
+  <div class="header-month">
+    <span style="font-size:12px;color:var(--muted)">Mês:</span>
+    <select id="monthSelect" onchange="changeMonth()"><option value="2026-02">Fev 2026</option><option value="2026-03">Mar 2026</option><option value="2026-04">Abr 2026</option><option value="2026-05">Mai 2026</option><option value="2026-06">Jun 2026</option><option value="2026-07">Jul 2026</option><option value="2026-08">Ago 2026</option><option value="2026-09">Set 2026</option></select>
+    <span id="driveStatus" class="idle" onclick="driveStatusClick()" title="Clique para conectar / desconectar o Google Drive">
+      <span id="driveStatusDot"></span>
+      <span id="driveStatusText">Drive: desconectado</span>
+    </span>
+    <button class="btn btn-ghost btn-sm" onclick="exportData()">⬇ Exportar</button>
+    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('importFile').click()">⬆ Importar</button>
+    <input type="file" id="importFile" style="display:none" accept=".json" onchange="importData(event)">
+  </div>
+</header>
+
+<nav class="nav">
+  <div class="nav-tab" onclick="setPage(&#39;dashboard&#39;)">Dashboard</div>
+  <div class="nav-tab" onclick="setPage(&#39;transactions&#39;)">Transações</div>
+  <div class="nav-tab" onclick="setPage(&#39;planned&#39;)">Planejado</div>
+  <div class="nav-tab" onclick="setPage(&#39;dre&#39;)">DRE Mensal</div>
+  <div class="nav-tab active" onclick="setPage(&#39;balance&#39;)">Balanço Patrimonial</div>
+</nav>
+
+<main class="main">
+
+<!-- ═══════════════════════ DASHBOARD ═══════════════════════ -->
+<div id="page-dashboard" class="page">
+  <div id="monthProgressBar" class="month-bar-wrap">
+    <div class="month-bar-header">
+      <span class="month-bar-title">Progresso do Mês</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="btn btn-green btn-sm" onclick="openLaunchModal()" style="font-size:11px">
+          ⚡ Lançar Planejado
+        </button>
+        <span class="month-bar-pct" id="monthPct">Dia 17 de 30</span>
+      </div>
+    </div>
+    <div class="month-bar-track">
+      <div class="month-bar-fill" id="monthFill" style="width: 56.6667%;"></div>
+      <div class="month-bar-now-line" id="monthNowLine" style="left: 56.6667%;"></div>
+    </div>
+    <div class="month-bar-labels">
+      <span>1</span><span id="monthDayLabel">Dia 17</span><span id="monthLastDay">30</span>
+    </div>
+  </div>
+
+  <div class="cards-grid" id="summaryCards"><div class="card">
+    <div class="card-label">Saldo Atual</div>
+    <div class="card-value green">R$ 4.832,83</div>
+    <div class="card-sub">Início: R$ 0,00</div>
+  </div><div class="card">
+    <div class="card-label">Receitas</div>
+    <div class="card-value green">R$ 7.963,00</div>
+    <div class="card-sub">Planejado: R$ 8.024,96</div>
+  </div><div class="card">
+    <div class="card-label">Gastos Fixos</div>
+    <div class="card-value red">R$ 1.504,76</div>
+    <div class="card-sub">Planejado: R$ 2.055,02</div>
+  </div><div class="card">
+    <div class="card-label">Gastos Variáveis</div>
+    <div class="card-value gold">R$ 1.625,41</div>
+    <div class="card-sub">Orçamento: R$ 3.800,00</div>
+  </div><div class="card">
+    <div class="card-label">Resultado</div>
+    <div class="card-value green">R$ 4.832,83</div>
+    <div class="card-sub">Planejado: R$ 2.169,94</div>
+  </div></div>
+
+  <div class="grid-2" style="margin-bottom:14px">
+    <div class="chart-card">
+      <div class="section-title">Saldo Diário + Regressão</div>
+      <div class="chart-wrap"><canvas id="chartBalance"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="section-title">Gastos por Categoria</div>
+      <div class="chart-wrap"><canvas id="chartCategories"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-bottom:14px">
+    <div class="chart-card">
+      <div class="section-title">Receitas vs Despesas</div>
+      <div class="chart-wrap"><canvas id="chartIncomeExpense"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="section-title">Gastos Variáveis por Tipo</div>
+      <div class="chart-wrap"><canvas id="chartVariable"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ TRANSAÇÕES ═══════════════════════ -->
+<div id="page-transactions" class="page">
+  <div class="form-box">
+    <div class="form-box-title">Nova Transação</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Data</label>
+        <input type="date" id="txDate">
+      </div>
+      <div class="form-group">
+        <label>Descrição</label>
+        <input type="text" id="txDesc" placeholder="Ex: Almoço">
+      </div>
+      <div class="form-group">
+        <label>Valor (R$)</label>
+        <input type="number" id="txValue" placeholder="0,00" step="0.01" min="0">
+      </div>
+      <div class="form-group">
+        <label>Parcelas</label>
+        <input type="number" id="txInstallments" value="1" min="1" max="60" title="1 = à vista; 2+ = parcelado (1 por mês a partir da data acima)">
+      </div>
+      <div class="form-group">
+        <label>Tipo</label>
+        <select id="txType" onchange="updateTxCategory()">
+          <option value="receita">Receita</option>
+          <option value="fixo">Gasto Fixo</option>
+          <option value="variavel" selected="">Gasto Variável</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Categoria</label>
+        <select id="txCategory"><option value="c_festa">Festa</option><option value="c_gasolina">Gasolina</option><option value="c_almoco">Almoço FGA</option><option value="c_alim">Alimentação</option><option value="c_mercado">Mercado</option><option value="c_extras">Extras</option></select>
+      </div>
+      <div class="form-group" style="justify-content:flex-end">
+        <button class="btn btn-green" onclick="addTransaction()">＋ Adicionar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">Transações do Mês</div>
+  <div class="table-wrap scroll-x">
+    <table>
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Descrição</th>
+          <th>Categoria</th>
+          <th>Tipo</th>
+          <th style="text-align:right">Valor</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="txTableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════ PLANEJADO ═══════════════════════ -->
+<div id="page-planned" class="page">
+
+  <div class="grid-2" style="margin-bottom:20px">
+
+    <!-- RECEITAS FIXAS -->
+    <div>
+      <div class="form-box">
+        <div class="form-box-title" style="color:var(--green)">＋ Nova Receita Planejada</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Descrição</label>
+            <input type="text" id="prDesc" placeholder="Salário, Freelance...">
+          </div>
+          <div class="form-group">
+            <label>Valor (R$)</label>
+            <input type="number" id="prValue" step="0.01" min="0">
+          </div>
+          <div class="form-group">
+            <label>Dia do mês</label>
+            <input type="number" id="prDay" min="1" max="31" placeholder="5">
+          </div>
+          <div class="form-group" style="justify-content:flex-end">
+            <button class="btn btn-green" onclick="addPlanned(&#39;receita&#39;)">Adicionar</button>
+          </div>
+        </div>
+      </div>
+      <div class="section-title">Receitas Planejadas</div>
+      <div class="table-wrap" id="plannedReceitas"><table>
+      <thead><tr><th>Descrição</th><th>Dia</th><th style="text-align:right">Valor</th><th></th></tr></thead>
+      <tbody><tr>
+        <td>Salário</td>
+        <td>5</td>
+        <td class="mono" style="text-align:right;color:var(--green)">R$ 2.300,00</td>
+        <td><button class="btn btn-red btn-sm" onclick="deletePlanned(&#39;receita&#39;,&#39;r_salario&#39;)">✕</button></td>
+      </tr><tr>
+        <td>VA</td>
+        <td>5</td>
+        <td class="mono" style="text-align:right;color:var(--green)">R$ 800,00</td>
+        <td><button class="btn btn-red btn-sm" onclick="deletePlanned(&#39;receita&#39;,&#39;r_va&#39;)">✕</button></td>
+      </tr><tr>
+        <td>Pagamento</td>
+        <td>5</td>
+        <td class="mono" style="text-align:right;color:var(--green)">R$ 4.863,00</td>
+        <td><button class="btn btn-red btn-sm" onclick="deletePlanned(&#39;receita&#39;,&#39;r_pagamento&#39;)">✕</button></td>
+      </tr><tr>
+        <td>RF DI</td>
+        <td>5</td>
+        <td class="mono" style="text-align:right;color:var(--green)">R$ 22,17</td>
+        <td><button class="btn btn-red btn-sm" onclick="deletePlanned(&#39;receita&#39;,&#39;r_rfdi&#39;)">✕</button></td>
+      </tr><tr>
+        <td>CDB C6</td>
+        <td>5</td>
+        <td class="mono" style="text-align:right;color:var(--green)">R$ 39,79</td>
+        <td><button class="btn btn-red btn-sm" onclick="deletePlanned(&#39;receita&#39;,&#39;r_cdb&#39;)">✕</button></td>
+      </tr><tr>
+        <td>Caronas</td>
+        <td>5</td>
+        <td class="mono" style="text-align:right;color:var(--green)">R$ 0,00</td>
+        <td><button class="btn btn-red btn-sm" onclick="deletePlanned(&#39;receita&#39;,&#39;r_caronas&#39;)">✕</button></td>
+      </tr></tbody>
+    </table></div>
+    </div>
+
+    <!-- GASTOS FIXOS -->
+    <div>
+      <div class="form-box">
+        <div class="form-box-title" style="color:var(--red)">－ Novo Gasto Fixo</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Descrição</label>
+            <input type="text" id="pfDesc" placeholder="Aluguel, Netflix...">
+          </div>
+          <div class="form-group">
+            <label>Valor (R$)</label>
+            <input type="number" id="pfValue" step="0.01" min="0">
+          </div>
+          <div class="form-group">
+            <label>Dia do mês</label>
+            <input type="number" id="pfDay" min="1" max="31" placeholder="10">
+          </div>
+          <div class="form-group" style="justify-content:flex-end">
+            <button class="btn btn-red" onclick="addPlanned(&#39;fixo&#39;)">Adicionar</button>
+          </div>
+        </div>
+      </div>
+      <div class="section-title">Gastos Fixos Planejados</div>
+      <div class="table-wrap" id="plannedFixos"><table>
+      <thead><tr><th>Descrição</th><th>Dia</th><th style="text-align:right">Valor</th><th></th></tr></thead>
+      <tbody><tr>
+        <td>Condomínio</td>
+        <td>10</td>
+        <td class="mono" style="text-align:right;color:var(--red)">R$ 445,12</td>
+        <td><button class="btn btn-red btn-sm" onclick="deletePlanned(&#39;fixo&#39;,&#39;f_cond&#39;)">✕</button></td>
+      </tr><tr>
+        <td>Academia</td>
+        <td>10</td>
+        <td class="mono" style="text-align:right;color:var(--red)">R$ 139,90</td>
+        <td><button class="btn btn-red btn-sm" onclick="deletePlanned(&#39;fixo&#39;,&#39;f_acad&#39;)">✕</button></td>
+      </tr><tr>
+        <td>Energia</td>
+        <td>15</td>
+        <td class="mono" style="text-align:right;color:var(--red)">R$ 200,00</td>
+        <td><button class="btn btn-red btn-sm" onclick="deletePlanned(&#39;fixo&#39;,&#39;f_energia&#39;)">✕</button></td>
+      </tr><tr>
+        <td>Faxina</td>
+        <td>15</td>
+        <td class="mono" style="text-align:right;color:var(--red)">R$ 300,00</td>
+        <td><button class="btn btn-red btn-sm" onclick="deletePlanned(&#39;fixo&#39;,&#39;f_faxina&#39;)">✕</button></td>
+      </tr><tr>
+        <td>Inglês</td>
+        <td>5</td>
+        <td class="mono" style="text-align:right;color:var(--red)">R$ 320,00</td>
+        <td><button class="btn btn-red btn-sm" onclick="deletePlanned(&#39;fixo&#39;,&#39;f_ingles&#39;)">✕</button></td>
+      </tr><tr>
+        <td>Tênis</td>
+        <td>10</td>
+        <td class="mono" style="text-align:right;color:var(--red)">R$ 150,00</td>
+        <td><button class="btn btn-red btn-sm" onclick="deletePlanned(&#39;fixo&#39;,&#39;f_tenis&#39;)">✕</button></td>
+      </tr><tr>
+        <td>Carro / Seguro / IPVA</td>
+        <td>5</td>
+        <td class="mono" style="text-align:right;color:var(--red)">R$ 500,00</td>
+        <td><button class="btn btn-red btn-sm" onclick="deletePlanned(&#39;fixo&#39;,&#39;f_carro&#39;)">✕</button></td>
+      </tr></tbody>
+    </table></div>
+    </div>
+
+  </div>
+
+  <!-- CATEGORIAS VARIÁVEIS -->
+  <div class="form-box">
+    <div class="form-box-title" style="color:var(--gold)">＋ Nova Categoria de Gasto Variável</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Nome da Categoria</label>
+        <input type="text" id="catName" placeholder="Alimentação, Lazer...">
+      </div>
+      <div class="form-group">
+        <label>Orçamento Mensal (R$)</label>
+        <input type="number" id="catBudget" step="0.01" min="0">
+      </div>
+      <div class="form-group">
+        <label>Cor</label>
+        <input type="color" id="catColor" value="#10B981">
+      </div>
+      <div class="form-group" style="justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="addCategory()">Adicionar</button>
+      </div>
+    </div>
+  </div>
+  <div class="section-title">Categorias Variáveis</div>
+  <div class="table-wrap" id="categoriesTable"><table>
+    <thead><tr><th>Cor</th><th>Categoria</th><th style="text-align:right">Orçamento</th><th style="text-align:right">Gasto no mês</th><th></th></tr></thead>
+    <tbody><tr>
+        <td><span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:#8B5CF6;vertical-align:middle"></span></td>
+        <td>Festa</td>
+        <td class="mono" style="text-align:right">R$ 200,00</td>
+        <td class="mono" style="text-align:right;color:var(--green)">R$ 30,00 <span style="font-size:10px;color:var(--muted)">(15%)</span></td>
+        <td><button class="btn btn-red btn-sm" onclick="deleteCategory(&#39;c_festa&#39;)">✕</button></td>
+      </tr><tr>
+        <td><span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:#F59E0B;vertical-align:middle"></span></td>
+        <td>Gasolina</td>
+        <td class="mono" style="text-align:right">R$ 1.000,00</td>
+        <td class="mono" style="text-align:right;color:var(--green)">R$ 292,34 <span style="font-size:10px;color:var(--muted)">(29%)</span></td>
+        <td><button class="btn btn-red btn-sm" onclick="deleteCategory(&#39;c_gasolina&#39;)">✕</button></td>
+      </tr><tr>
+        <td><span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:#3B82F6;vertical-align:middle"></span></td>
+        <td>Almoço FGA</td>
+        <td class="mono" style="text-align:right">R$ 800,00</td>
+        <td class="mono" style="text-align:right;color:var(--green)">R$ 284,03 <span style="font-size:10px;color:var(--muted)">(36%)</span></td>
+        <td><button class="btn btn-red btn-sm" onclick="deleteCategory(&#39;c_almoco&#39;)">✕</button></td>
+      </tr><tr>
+        <td><span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:#10B981;vertical-align:middle"></span></td>
+        <td>Alimentação</td>
+        <td class="mono" style="text-align:right">R$ 1.000,00</td>
+        <td class="mono" style="text-align:right;color:var(--green)">R$ 226,08 <span style="font-size:10px;color:var(--muted)">(23%)</span></td>
+        <td><button class="btn btn-red btn-sm" onclick="deleteCategory(&#39;c_alim&#39;)">✕</button></td>
+      </tr><tr>
+        <td><span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:#06B6D4;vertical-align:middle"></span></td>
+        <td>Mercado</td>
+        <td class="mono" style="text-align:right">R$ 200,00</td>
+        <td class="mono" style="text-align:right;color:var(--red)">R$ 282,27 <span style="font-size:10px;color:var(--muted)">(100%)</span></td>
+        <td><button class="btn btn-red btn-sm" onclick="deleteCategory(&#39;c_mercado&#39;)">✕</button></td>
+      </tr><tr>
+        <td><span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:#EF4444;vertical-align:middle"></span></td>
+        <td>Extras</td>
+        <td class="mono" style="text-align:right">R$ 600,00</td>
+        <td class="mono" style="text-align:right;color:var(--green)">R$ 510,69 <span style="font-size:10px;color:var(--muted)">(85%)</span></td>
+        <td><button class="btn btn-red btn-sm" onclick="deleteCategory(&#39;c_extras&#39;)">✕</button></td>
+      </tr></tbody>
+  </table></div>
+
+  <div class="separator"></div>
+
+  <!-- SALDO INICIAL -->
+  <div class="form-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="form-box-title" style="margin-bottom:0">Saldo Inicial do Mês (R$)</div>
+      <button class="btn btn-ghost btn-sm" onclick="resetToSeed()" style="font-size:11px;color:var(--muted)">↺ Resetar para dados do PDF</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Saldo em conta no início do mês</label>
+        <input type="number" id="initialBalance" step="0.01" placeholder="0,00" oninput="saveInitialBalance()">
+      </div>
+      <div class="form-group">
+        <label>Patrimônio total (bens, investimentos etc.)</label>
+        <input type="number" id="totalWealth" step="0.01" placeholder="0,00" oninput="saveInitialBalance()">
+      </div>
+      <div class="form-group">
+        <label>Total de dívidas / passivos</label>
+        <input type="number" id="totalLiabilities" step="0.01" placeholder="0,00" oninput="saveInitialBalance()">
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════ DRE ═══════════════════════ -->
+<div id="page-dre" class="page">
+  <div class="grid-2">
+    <div>
+      <div class="section-title">DRE — <span id="dreMonthLabel">Jun 2026</span></div>
+      <div class="table-wrap" id="dreTable"><div class="dre-row section-header">
+      <div class="dre-label" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted)">Receitas</div>
+      <div class="dre-col-header">Planejado</div>
+      <div class="dre-col-header">Realizado</div>
+      <div class="dre-col-header">Δ</div>
+    </div><div class="dre-row " style="padding-left:22px">
+      <div class="dre-label">Salário</div>
+      <div class="dre-val-planned">R$ 2.300,00</div>
+      <div class="dre-val" style="color:var(--green)">R$ 2.300,00</div>
+      <div class="dre-val-delta" style="color:var(--muted)">0,00</div>
+    </div><div class="dre-row " style="padding-left:22px">
+      <div class="dre-label">VA</div>
+      <div class="dre-val-planned">R$ 800,00</div>
+      <div class="dre-val" style="color:var(--green)">R$ 800,00</div>
+      <div class="dre-val-delta" style="color:var(--muted)">0,00</div>
+    </div><div class="dre-row " style="padding-left:22px">
+      <div class="dre-label">Pagamento</div>
+      <div class="dre-val-planned">R$ 4.863,00</div>
+      <div class="dre-val" style="color:var(--green)">R$ 4.863,00</div>
+      <div class="dre-val-delta" style="color:var(--muted)">0,00</div>
+    </div><div class="dre-row " style="padding-left:22px">
+      <div class="dre-label">RF DI</div>
+      <div class="dre-val-planned">R$ 22,17</div>
+      <div class="dre-val" style="color:var(--green)">R$ 0,00</div>
+      <div class="dre-val-delta" style="color:var(--red)">-22,17</div>
+    </div><div class="dre-row " style="padding-left:22px">
+      <div class="dre-label">CDB C6</div>
+      <div class="dre-val-planned">R$ 39,79</div>
+      <div class="dre-val" style="color:var(--green)">R$ 0,00</div>
+      <div class="dre-val-delta" style="color:var(--red)">-39,79</div>
+    </div><div class="dre-row " style="padding-left:22px">
+      <div class="dre-label">Caronas</div>
+      <div class="dre-val-planned">R$ 0,00</div>
+      <div class="dre-val" style="color:var(--green)">R$ 0,00</div>
+      <div class="dre-val-delta" style="color:var(--muted)">0,00</div>
+    </div><div class="dre-row subtotal">
+      <div class="dre-label">(+) Total Receitas</div>
+      <div class="dre-val-planned">R$ 8.024,96</div>
+      <div class="dre-val" style="color:var(--green)">R$ 7.963,00</div>
+      <div class="dre-val-delta" style="color:var(--red)">-61,96</div>
+    </div><div class="dre-row section-header">
+      <div class="dre-label" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted)">Gastos Fixos</div>
+      <div class="dre-col-header">Planejado</div>
+      <div class="dre-col-header">Realizado</div>
+      <div class="dre-col-header">Δ</div>
+    </div><div class="dre-row " style="padding-left:22px">
+      <div class="dre-label">Condomínio</div>
+      <div class="dre-val-planned">R$ 445,12</div>
+      <div class="dre-val" style="color:var(--red)">R$ 405,09</div>
+      <div class="dre-val-delta" style="color:var(--green)">-40,03</div>
+    </div><div class="dre-row " style="padding-left:22px">
+      <div class="dre-label">Academia</div>
+      <div class="dre-val-planned">R$ 139,90</div>
+      <div class="dre-val" style="color:var(--red)">R$ 0,00</div>
+      <div class="dre-val-delta" style="color:var(--green)">-139,90</div>
+    </div><div class="dre-row " style="padding-left:22px">
+      <div class="dre-label">Energia</div>
+      <div class="dre-val-planned">R$ 200,00</div>
+      <div class="dre-val" style="color:var(--red)">R$ 149,67</div>
+      <div class="dre-val-delta" style="color:var(--green)">-50,33</div>
+    </div><div class="dre-row " style="padding-left:22px">
+      <div class="dre-label">Faxina</div>
+      <div class="dre-val-planned">R$ 300,00</div>
+      <div class="dre-val" style="color:var(--red)">R$ 130,00</div>
+      <div class="dre-val-delta" style="color:var(--green)">-170,00</div>
+    </div><div class="dre-row " style="padding-left:22px">
+      <div class="dre-label">Inglês</div>
+      <div class="dre-val-planned">R$ 320,00</div>
+      <div class="dre-val" style="color:var(--red)">R$ 320,00</div>
+      <div class="dre-val-delta" style="color:var(--muted)">0,00</div>
+    </div><div class="dre-row " style="padding-left:22px">
+      <div class="dre-label">Tênis</div>
+      <div class="dre-val-planned">R$ 150,00</div>
+      <div class="dre-val" style="color:var(--red)">R$ 0,00</div>
+      <div class="dre-val-delta" style="color:var(--green)">-150,00</div>
+    </div><div class="dre-row " style="padding-left:22px">
+      <div class="dre-label">Carro / Seguro / IPVA</div>
+      <div class="dre-val-planned">R$ 500,00</div>
+      <div class="dre-val" style="color:var(--red)">R$ 500,00</div>
+      <div class="dre-val-delta" style="color:var(--muted)">0,00</div>
+    </div><div class="dre-row subtotal">
+      <div class="dre-label">(−) Total Fixos</div>
+      <div class="dre-val-planned">R$ 2.055,02</div>
+      <div class="dre-val" style="color:var(--red)">R$ 1.504,76</div>
+      <div class="dre-val-delta" style="color:var(--green)">-550,26</div>
+    </div><div class="dre-row section-header">
+      <div class="dre-label" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted)">Gastos Variáveis</div>
+      <div class="dre-col-header">Planejado</div>
+      <div class="dre-col-header">Realizado</div>
+      <div class="dre-col-header">Δ</div>
+    </div><div class="dre-row " style="padding-left:22px">
+      <div class="dre-label"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:50%;background:#8B5CF6;flex-shrink:0"></span>Festa</span></div>
+      <div class="dre-val-planned">R$ 200,00</div>
+      <div class="dre-val" style="color:var(--gold)">R$ 30,00</div>
+      <div class="dre-val-delta" style="color:var(--green)">-170,00</div>
+    </div><div class="dre-row " style="padding-left:22px">
+      <div class="dre-label"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:50%;background:#F59E0B;flex-shrink:0"></span>Gasolina</span></div>
+      <div class="dre-val-planned">R$ 1.000,00</div>
+      <div class="dre-val" style="color:var(--gold)">R$ 292,34</div>
+      <div class="dre-val-delta" style="color:var(--green)">-707,66</div>
+    </div><div class="dre-row " style="padding-left:22px">
+      <div class="dre-label"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:50%;background:#3B82F6;flex-shrink:0"></span>Almoço FGA</span></div>
+      <div class="dre-val-planned">R$ 800,00</div>
+      <div class="dre-val" style="color:var(--gold)">R$ 284,03</div>
+      <div class="dre-val-delta" style="color:var(--green)">-515,97</div>
+    </div><div class="dre-row " style="padding-left:22px">
+      <div class="dre-label"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:50%;background:#10B981;flex-shrink:0"></span>Alimentação</span></div>
+      <div class="dre-val-planned">R$ 1.000,00</div>
+      <div class="dre-val" style="color:var(--gold)">R$ 226,08</div>
+      <div class="dre-val-delta" style="color:var(--green)">-773,92</div>
+    </div><div class="dre-row " style="padding-left:22px">
+      <div class="dre-label"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:50%;background:#06B6D4;flex-shrink:0"></span>Mercado</span></div>
+      <div class="dre-val-planned">R$ 200,00</div>
+      <div class="dre-val" style="color:var(--gold)">R$ 282,27</div>
+      <div class="dre-val-delta" style="color:var(--red)">+82,27</div>
+    </div><div class="dre-row " style="padding-left:22px">
+      <div class="dre-label"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:50%;background:#EF4444;flex-shrink:0"></span>Extras</span></div>
+      <div class="dre-val-planned">R$ 600,00</div>
+      <div class="dre-val" style="color:var(--gold)">R$ 510,69</div>
+      <div class="dre-val-delta" style="color:var(--green)">-89,31</div>
+    </div><div class="dre-row subtotal">
+      <div class="dre-label">(−) Total Variáveis</div>
+      <div class="dre-val-planned">R$ 3.800,00</div>
+      <div class="dre-val" style="color:var(--gold)">R$ 1.625,41</div>
+      <div class="dre-val-delta" style="color:var(--green)">-2.174,59</div>
+    </div><div class="dre-row total">
+    <div class="dre-label">(=) Resultado do Período</div>
+    <div class="dre-val-planned">R$ 2.169,94</div>
+    <div class="dre-val" style="color:var(--green)">R$ 4.832,83</div>
+    <div class="dre-val-delta" style="color:var(--green)">+2.662,89</div>
+  </div></div>
+    </div>
+    <div>
+      <div class="section-title">Realizado vs Planejado</div>
+      <div class="chart-card"><div class="chart-wrap"><canvas id="chartDre"></canvas></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ BALANÇO ═══════════════════════ -->
+<div id="page-balance" class="page active">
+
+  <!-- headline cards -->
+  <div class="cards-grid" id="balSummaryCards" style="margin-bottom:16px"><div class="card">
+    <div class="card-label">PL Atual</div>
+    <div class="card-value green">R$ 4.832,83</div>
+    <div class="card-sub">Patrimônio hoje</div>
+  </div><div class="card">
+    <div class="card-label">PL Projetado</div>
+    <div class="card-value green">R$ 2.437,34</div>
+    <div class="card-sub">Após pagar tudo planejado</div>
+  </div><div class="card">
+    <div class="card-label">Provisões Restantes</div>
+    <div class="card-value gold">R$ 2.457,45</div>
+    <div class="card-sub">Fixos: R$ 459,90 · Var: R$ 1.997,55</div>
+  </div><div class="card">
+    <div class="card-label">Margem Disponível</div>
+    <div class="card-value green">R$ 2.437,34</div>
+    <div class="card-sub">Quanto pode gastar livremente</div>
+  </div></div>
+
+  <!-- três BPs lado a lado -->
+  <div class="grid-3" style="margin-bottom:16px;align-items:start">
+    <div>
+      <div class="section-title">BP Atual — <span id="balDateLabel">17/06/2026</span></div>
+      <div class="table-wrap" id="balTable">
+      <div class="bal-block">
+        <div class="bal-col-ativo">
+          <div class="bal-section">
+            <div class="bal-header">ATIVO</div>
+            <div class="dre-row">
+              <div class="dre-label">Circulante — Caixa / Conta</div>
+              <div class="dre-val" style="color:var(--green)">R$ 4.832,83</div>
+            </div>
+            <div class="dre-row">
+              <div class="dre-label">Não Circulante — Investimentos / Bens</div>
+              <div class="dre-val blue">R$ 0,00</div>
+            </div>
+            <div class="dre-row subtotal" style="margin-top:auto">
+              <div class="dre-label">Total do Ativo</div>
+              <div class="dre-val">R$ 4.832,83</div>
+            </div>
+          </div>
+        </div>
+        <div class="bal-col-pp">
+          <div class="bal-section">
+            <div class="bal-header">PASSIVO</div>
+            <div class="dre-row"><div class="dre-label" style="color:var(--muted)">Sem passivos</div><div class="dre-val">—</div></div>
+            <div class="dre-row subtotal">
+              <div class="dre-label">Total do Passivo</div>
+              <div class="dre-val red">R$ 0,00</div>
+            </div>
+          </div>
+          <div class="bal-section">
+            <div class="bal-header">PATRIMÔNIO LÍQUIDO</div>
+            <div class="dre-row total">
+              <div class="dre-label">PL = Ativo − Passivo</div>
+              <div class="dre-val" style="color:var(--green)">R$ 4.832,83</div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+    <div>
+      <div class="section-title">BP Projetado — fim de <span id="balMonthLabel">Jun 2026</span></div>
+      <div class="table-wrap" id="balProjectedTable">
+      <div class="bal-block">
+        <div class="bal-col-ativo">
+          <div class="bal-section">
+            <div class="bal-header">ATIVO</div>
+            <div class="dre-row">
+              <div class="dre-label">Circulante — Caixa / Conta</div>
+              <div class="dre-val" style="color:var(--green)">R$ 4.894,79</div>
+            </div>
+            <div class="dre-row">
+              <div class="dre-label">Não Circulante — Investimentos / Bens</div>
+              <div class="dre-val blue">R$ 0,00</div>
+            </div>
+            <div class="dre-row subtotal" style="margin-top:auto">
+              <div class="dre-label">Total do Ativo</div>
+              <div class="dre-val">R$ 4.894,79</div>
+            </div>
+          </div>
+        </div>
+        <div class="bal-col-pp">
+          <div class="bal-section">
+            <div class="bal-header">PASSIVO</div>
+            <div class="dre-row" style="background:rgba(245,158,11,.05)">
+            <div class="dre-label" style="color:var(--gold)">Provisões — Despesas a Pagar</div>
+            <div class="dre-val" style="color:var(--gold)">R$ 2.457,45</div>
+           </div>
+           <div class="dre-row" style="font-size:11px">
+            <div class="dre-label" style="color:var(--muted);padding-left:12px">↳ Receitas a receber (abate do caixa proj.)</div>
+            <div class="dre-val" style="color:var(--green);font-size:11px">+R$ 61,96</div>
+           </div>
+            <div class="dre-row subtotal">
+              <div class="dre-label">Total do Passivo</div>
+              <div class="dre-val red">R$ 2.457,45</div>
+            </div>
+          </div>
+          <div class="bal-section">
+            <div class="bal-header">PATRIMÔNIO LÍQUIDO</div>
+            <div class="dre-row total">
+              <div class="dre-label">PL = Ativo − Passivo</div>
+              <div class="dre-val" style="color:var(--green)">R$ 2.437,34</div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+    <div>
+      <div class="section-title">BP Projetado + Próx. Meses</div>
+      <div class="table-wrap" id="balProjectedFutureTable">
+      <div class="empty-state">Calculando…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- detalhamento das provisões -->
+  <div class="grid-2" style="align-items:start">
+    <div class="chart-card">
+      <div class="section-title">Ativo vs Passivo + PL — Atual e Projetado</div>
+      <div style="font-size:11px;color:var(--muted);margin:-6px 0 10px">Em cada par de barras, o Ativo (cima) e o Passivo + Patrimônio Líquido (baixo) sempre somam o mesmo valor — é a equação contábil básica, agora visual.</div>
+      <div class="chart-wrap"><canvas id="chartBalance2"></canvas></div>
+    </div>
+    <div>
+      <div class="section-title">Detalhamento — Futuro e Provisões</div>
+      <div style="font-size:11px;color:var(--muted);margin:-6px 0 10px">Transações futuras já lançadas entram automaticamente no Passivo/Ativo extra-caixa. Para o que falta do orçamento, ajuste o campo "ainda vou gastar" com sua própria estimativa (por padrão vem com o valor que falta do orçamento) e marque o que deve entrar como provisão no BP Projetado.</div>
+      <div class="table-wrap" id="balProvisionTable"></div>
+    </div>
+  </div>
+
+  <!-- ═══ PROVISÃO CARRO: IPVA / LICENCIAMENTO / SEGURO / REVISÃO ═══ -->
+  <div class="section-title" style="margin-top:20px">🚗 Provisão Carro — IPVA, Licenciamento, Seguro, Revisão</div>
+  <div class="chart-card" style="margin-bottom:16px">
+
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px;margin-bottom:16px">
+      <div style="font-size:11px;color:var(--muted);max-width:480px;line-height:1.7">
+        Cadastre cada obrigação — à vista ou parcelada (ex: "IPVA, 5x de R$903,59 a partir de jan/2027").
+        O app monta o cronograma completo de saídas e calcula <b style="color:var(--text)">um único PMT mensal</b>:
+        o quanto guardar todo mês, a partir de hoje, rendendo à taxa de desconto abaixo, para que o saldo acumulado
+        nunca fique negativo — cobrindo cada parcela exatamente quando ela vencer.
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;min-width:200px">
+        <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)">Taxa de desconto (% ao mês)</label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="number" id="cdiManualInput" step="0.01" min="0" max="5" placeholder="0,90"
+            style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:7px;font-family:var(--mono);font-size:14px;font-weight:600;width:85px;text-align:right"
+            onfocus="this._focused=true" onblur="this._focused=false">
+          <span style="font-size:12px;color:var(--muted)">% a.m.</span>
+          <button class="btn btn-green btn-sm" onclick="saveCdiManual()">Aplicar</button>
+        </div>
+        <div style="font-size:10px;color:var(--muted)">
+          Atual: <span id="cdiRateLabel" style="color:var(--gold);font-weight:600"></span>
+          <div id="cdiRateDate" style="color:var(--muted)">0,83%≈10% a.a. · 0,90%≈11% a.a. · 1,07%≈13,6% a.a.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- form para adicionar obrigação -->
+    <div class="form-grid" style="margin-bottom:8px">
+      <div class="form-group">
+        <label>Descrição</label>
+        <input type="text" id="carObrName" placeholder="IPVA 2027, Seguro, Revisão...">
+      </div>
+      <div class="form-group">
+        <label>Valor da parcela</label>
+        <input type="number" id="carObrValue" step="0.01" min="0">
+      </div>
+      <div class="form-group">
+        <label>Nº de parcelas</label>
+        <input type="number" id="carObrInstallments" step="1" min="1" value="1">
+      </div>
+      <div class="form-group">
+        <label>1ª parcela (mês/ano)</label>
+        <input type="month" id="carObrDue">
+      </div>
+      <div class="form-group">
+        <label>Repete a cada (meses)</label>
+        <input type="number" id="carObrInterval" step="1" min="1" value="1" title="1 = mensal, 12 = anual">
+      </div>
+      <div class="form-group" style="justify-content:flex-end">
+        <button class="btn btn-gold" onclick="addCarObligation()">+ Adicionar</button>
+      </div>
+    </div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:14px">
+      Para um pagamento único (ex: Licenciamento), deixe "Nº de parcelas" = 1. Para "Seguro de jul/2026 a jan/2027,
+      depois abr e mai/2027" (intervalo não-uniforme), cadastre como dois lançamentos separados.
+    </div>
+
+    <div class="table-wrap" id="carObligationsTable"></div>
+
+    <!-- resumo PMT -->
+    <div style="margin-top:14px;padding:12px 14px;background:var(--surface2);border-radius:8px;display:flex;gap:24px;flex-wrap:wrap;align-items:flex-end">
+      <div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:3px">Total a pagar (todas as parcelas)</div>
+        <div id="carTotalDue" class="mono" style="font-size:16px;font-weight:600;color:var(--gold)">R$ 0,00</div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:3px">Já guardado até <span id="carSavedUpToLabel">o mês observado</span> (lançado em Carro/Seguro/IPVA)</div>
+        <div id="carAlreadySaved" class="mono" style="font-size:15px;font-weight:600;color:var(--green)">R$ 0,00</div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:3px">PMT mensal único (recalculado por mês observado)</div>
+        <div id="carPmtTotal" class="mono" style="font-size:18px;font-weight:700;color:var(--blue)">R$ 0,00</div>
+        <div style="font-size:10px;color:var(--muted)">guarde esse valor todo mês a partir de <span id="carPmtFromLabel">—</span> até a última parcela</div>
+      </div>
+    </div>
+
+    <!-- cronograma do fundo -->
+    <details style="margin-top:14px">
+      <summary style="cursor:pointer;font-size:11px;color:var(--muted);font-weight:600">Ver cronograma mês a mês do fundo (saldo acumulado)</summary>
+      <div class="table-wrap" id="carScheduleTable" style="margin-top:10px"></div>
+    </details>
+  </div>
+
+</div>
+
+</main>
+
+<!-- ═══════════════════════ MODAL LANÇAR PLANEJADO ═══════════════════════ -->
+<div id="launchModal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);overflow-y:auto;padding:20px">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;max-width:680px;margin:0 auto;overflow:hidden">
+
+    <!-- header -->
+    <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+      <div>
+        <div style="font-size:15px;font-weight:700;margin-bottom:4px">⚡ Lançar Transações Planejadas</div>
+        <div style="font-size:12px;color:var(--muted)" id="launchModalSubtitle"></div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="closeLaunchModal()" style="flex-shrink:0">✕</button>
+    </div>
+
+    <!-- aviso de duplicatas -->
+    <div id="launchDupWarning" style="display:none;margin:14px 20px 0;padding:10px 14px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;font-size:12px;color:var(--gold)"></div>
+
+    <!-- data padrão de lançamento -->
+    <div style="margin:14px 20px 0;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="font-size:12px;color:var(--muted);flex:1;min-width:160px">
+        Data padrão para os itens marcados abaixo (substitui o "dia" configurado em Planejado). Você também pode editar a data de cada item individualmente.
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <label for="launchDefaultDate" style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Data padrão</label>
+        <input type="date" id="launchDefaultDate" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:6px;font-family:var(--mono);font-size:12px">
+        <button class="btn btn-ghost btn-sm" onclick="applyLaunchDefaultDate()">Aplicar a todos</button>
+      </div>
+    </div>
+
+    <!-- tabela de preview -->
+    <div style="padding:14px 20px">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:10px">Selecione o que lançar</div>
+
+      <!-- receitas -->
+      <div id="launchReceitasSection">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--green);padding:8px 0 6px;border-bottom:1px solid var(--border);margin-bottom:4px">
+          Receitas
+        </div>
+        <div id="launchReceitasList"></div>
+      </div>
+
+      <!-- fixos -->
+      <div id="launchFixosSection" style="margin-top:10px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--red);padding:8px 0 6px;border-bottom:1px solid var(--border);margin-bottom:4px">
+          Gastos Fixos
+        </div>
+        <div id="launchFixosList"></div>
+      </div>
+
+      <!-- variáveis -->
+      <div id="launchVariaveisSection" style="margin-top:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0 6px;border-bottom:1px solid var(--border);margin-bottom:4px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--gold)">Gastos Variáveis <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(orçamento cheio)</span></div>
+        </div>
+        <div id="launchVariaveisList"></div>
+      </div>
+    </div>
+
+    <!-- totais -->
+    <div style="margin:0 20px;padding:12px 14px;background:var(--surface2);border-radius:8px;display:flex;gap:20px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:3px">Receitas selecionadas</div>
+        <div id="launchTotalRec" style="font-family:var(--mono);font-size:15px;font-weight:600;color:var(--green)">R$ 0,00</div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:3px">Despesas selecionadas</div>
+        <div id="launchTotalDesp" style="font-family:var(--mono);font-size:15px;font-weight:600;color:var(--red)">R$ 0,00</div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:3px">Resultado líquido</div>
+        <div id="launchTotalLiq" style="font-family:var(--mono);font-size:15px;font-weight:600">R$ 0,00</div>
+      </div>
+    </div>
+
+    <!-- actions -->
+    <div style="padding:16px 20px;display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closeLaunchModal()">Cancelar</button>
+      <button class="btn btn-green" onclick="confirmLaunch()" id="launchConfirmBtn">Lançar selecionados</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════ STORAGE ═══════════════════
+const KEYS = {
+  transactions: 'cf_transactions',
+  planned:      'cf_planned',
+  categories:   'cf_categories',
+  meta:         'cf_meta',
+  currentMonth: 'cf_currentMonth',
+  carObligations: 'cf_carObligations',
+  cdiCache:     'cf_cdiCache',
+};
+
+const DRIVE = {
+  CLIENT_ID:  '263564720587-51bqiiie1e7sh8s25j585vdhpsa3jlf9.apps.googleusercontent.com',
+  SCOPE:      'https://www.googleapis.com/auth/drive.file',
+  FILE_NAME:  'financas_sync.json',
+  FILE_KEY:   'cf_driveFileId',
+  TOKEN_KEY:  'cf_driveToken',
+};
+
+// Variáveis de estado do Drive — declaradas aqui (antes de qualquer save()) para evitar TDZ
+let _driveToken   = null;
+let _driveFileId  = localStorage.getItem(DRIVE.FILE_KEY) || null;
+let _syncDebounce = null;
+let _tokenClient  = null;
+
+function load(k) {
+  try { return JSON.parse(localStorage.getItem(k)) || null; } catch { return null; }
+}
+// Salva no localStorage E agenda sync com o Drive (debounced 2 s).
+// Chaves de estado interno não disparam sync.
+const _SYNC_SKIP_KEYS = new Set([KEYS.currentMonth, DRIVE.TOKEN_KEY, DRIVE.FILE_KEY, KEYS.cdiCache]);
+function save(k, v) {
+  localStorage.setItem(k, JSON.stringify(v));
+  if (!_SYNC_SKIP_KEYS.has(k) && typeof driveSyncSchedule === 'function') driveSyncSchedule();
+}
+
+// ═══════════════════ STATE ═══════════════════
+
+// ── IDs fixos para o seed do PDF (estáveis entre reloads)
+const SEED = {
+  // receitas
+  rSalario:   'r_salario',
+  rVA:        'r_va',
+  rPagamento: 'r_pagamento',
+  rRFDI:      'r_rfdi',
+  rCDB:       'r_cdb',
+  rCaronas:   'r_caronas',
+  // fixos
+  fCond:      'f_cond',
+  fAcad:      'f_acad',
+  fEnergia:   'f_energia',
+  fFaxina:    'f_faxina',
+  fIngles:    'f_ingles',
+  fTenis:     'f_tenis',
+  fCarro:     'f_carro',
+  // categorias variáveis
+  cFesta:     'c_festa',
+  cGasolina:  'c_gasolina',
+  cAlmoco:    'c_almoco',
+  cAlim:      'c_alim',
+  cMercado:   'c_mercado',
+  cExtras:    'c_extras',
+};
+
+function seedPlanned() {
+  return {
+    receita: [
+      { id: SEED.rSalario,   desc: 'Salário',    value: 2300.00, day: 5  },
+      { id: SEED.rVA,        desc: 'VA',          value:  800.00, day: 5  },
+      { id: SEED.rPagamento, desc: 'Pagamento',   value: 4863.00, day: 5  },
+      { id: SEED.rRFDI,      desc: 'RF DI',       value:   22.17, day: 5  },
+      { id: SEED.rCDB,       desc: 'CDB C6',      value:   39.79, day: 5  },
+      { id: SEED.rCaronas,   desc: 'Caronas',     value:    0.00, day: 5  },
+    ],
+    fixo: [
+      { id: SEED.fCond,    desc: 'Condomínio',          value:  445.12, day: 10 },
+      { id: SEED.fAcad,    desc: 'Academia',             value:  139.90, day: 10 },
+      { id: SEED.fEnergia, desc: 'Energia',              value:  200.00, day: 15 },
+      { id: SEED.fFaxina,  desc: 'Faxina',               value:  300.00, day: 15 },
+      { id: SEED.fIngles,  desc: 'Inglês',               value:  320.00, day:  5 },
+      { id: SEED.fTenis,   desc: 'Tênis',                value:  150.00, day: 10 },
+      { id: SEED.fCarro,   desc: 'Carro / Seguro / IPVA',value:  500.00, day:  5 },
+    ],
+  };
+}
+
+function seedCategories() {
+  return [
+    { id: SEED.cFesta,    name: 'Festa',       budget:  200.00, color: '#8B5CF6' },
+    { id: SEED.cGasolina, name: 'Gasolina',    budget: 1000.00, color: '#F59E0B' },
+    { id: SEED.cAlmoco,   name: 'Almoço FGA',  budget:  800.00, color: '#3B82F6' },
+    { id: SEED.cAlim,     name: 'Alimentação', budget: 1000.00, color: '#10B981' },
+    { id: SEED.cMercado,  name: 'Mercado',     budget:  200.00, color: '#06B6D4' },
+    { id: SEED.cExtras,   name: 'Extras',      budget:  600.00, color: '#EF4444' },
+  ];
+}
+
+function seedCarObligations() {
+  // Parcelas informadas pelo usuário para a Provisão Carro (IPVA / Licenciamento / Seguro / Revisão)
+  return [
+    { id: 'co_ipva',      desc: 'IPVA 2027',         value: 903.59, installments: 5, intervalMonths: 1, firstYM: '2027-01' }, // 5x jan→mai/2027
+    { id: 'co_licenc',    desc: 'Licenciamento',     value: 174.08, installments: 1, intervalMonths: 1, firstYM: '2027-05' }, // 1x mai/2027
+    { id: 'co_revisao',   desc: 'Revisão',           value: 179.42, installments: 8, intervalMonths: 1, firstYM: '2026-07' }, // 8x jul/2026→fev/2027
+    { id: 'co_seguro_1',  desc: 'Seguro (jul–jan)',  value: 395.61, installments: 7, intervalMonths: 1, firstYM: '2026-07' }, // 7x jul/2026→jan/2027
+    { id: 'co_seguro_2',  desc: 'Seguro (abr–mai)',  value: 395.61, installments: 2, intervalMonths: 1, firstYM: '2027-04' }, // 2x abr→mai/2027
+  ];
+}
+
+function seedTransactions() {
+  return []; // Usuário novo começa sem transações pré-cadastradas
+}
+
+function seedJuneTransactions() {
+  return []; // Limpo para novos usuários
+}
+
+
+function defaultCategories() { return seedCategories(); }
+
+// Aplica seed se ainda não houver dados salvos
+function applySeedIfEmpty() {
+  const hasTx      = load(KEYS.transactions);
+  const hasPlanned = load(KEYS.planned);
+  const hasCat     = load(KEYS.categories);
+  const hasMeta    = load(KEYS.meta);
+
+  if (!hasPlanned) { save(KEYS.planned, seedPlanned()); }
+  if (!hasCat)     { save(KEYS.categories, seedCategories()); }
+  if (!hasTx)      { save(KEYS.transactions, {}); }  // novo usuário: sem transações
+  if (!hasMeta)    { save(KEYS.meta, { initialBalance: {}, totalWealth: 0, totalLiabilities: 0, cdiManualPct: 0.9 }); }
+}
+
+applySeedIfEmpty();
+
+let transactions = load(KEYS.transactions) || {};
+let planned      = load(KEYS.planned)      || seedPlanned();
+let categories   = load(KEYS.categories)   || seedCategories();
+let meta         = load(KEYS.meta)         || { initialBalance: {}, totalWealth: 0, totalLiabilities: 0 };
+let carObligations = load(KEYS.carObligations) || seedCarObligations(); // [{id, desc, value, installments, intervalMonths, firstYM}]
+// migração: formato antigo tinha {value, dueDate} como pagamento único — converte para o novo formato parcelado
+carObligations = carObligations.map(o => {
+  if (o.installments !== undefined) return o; // já está no formato novo
+  return {
+    id: o.id, desc: o.desc, value: o.value,
+    installments: 1, intervalMonths: 1,
+    firstYM: o.dueDate ? o.dueDate.slice(0, 7) : currentDateYM(),
+  };
+});
+save(KEYS.carObligations, carObligations); // garante persistência do seed/migração já na primeira carga
+// cdiRate removido — taxa agora é manual via meta.cdiManualPct
+
+// Garante que as transações de jun/2026 (extratos enviados) estejam presentes,
+// sem duplicar caso a página já tenha sido carregada antes (ids fixos)
+
+let currentMonth = load(KEYS.currentMonth) || todayYM();
+
+function uid() { return Math.random().toString(36).slice(2,9); }
+function todayYM() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+function ymToLabel(ym) {
+  const [y,m] = ym.split('-');
+  const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  return `${months[+m-1]} ${y}`;
+}
+function daysInMonth(ym) {
+  const [y,m] = ym.split('-');
+  return new Date(+y, +m, 0).getDate();
+}
+function fmt(v) {
+  return 'R$ ' + (+v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function fmtSigned(v) {
+  const s = (+v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (v >= 0 ? '+ R$ ' : '− R$ ') + Math.abs(+v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// ═══════════════════ MONTH SELECT ═══════════════════
+function buildMonthSelect() {
+  const sel = document.getElementById('monthSelect');
+  sel.innerHTML = '';
+  const months = getAllMonths();
+  months.forEach(m => {
+    const o = document.createElement('option');
+    o.value = m; o.textContent = ymToLabel(m);
+    if (m === currentMonth) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+function getAllMonths() {
+  const set = new Set();
+  set.add(todayYM());
+  set.add(currentMonth);
+  Object.keys(transactions).forEach(k => set.add(k));
+  // add prev/next
+  const today = todayYM();
+  const [ty,tm] = today.split('-').map(Number);
+  for (let i = -3; i <= 3; i++) {
+    let mm = tm + i; let yy = ty;
+    while (mm > 12) { mm -= 12; yy++; }
+    while (mm < 1)  { mm += 12; yy--; }
+    set.add(`${yy}-${String(mm).padStart(2,'0')}`);
+  }
+  return [...set].sort();
+}
+
+function changeMonth() {
+  currentMonth = document.getElementById('monthSelect').value;
+  save(KEYS.currentMonth, currentMonth);
+  renderAll();
+}
+
+// ═══════════════════ TRANSACTIONS ═══════════════════
+function txList() { return transactions[currentMonth] || []; }
+function txSave(list) { transactions[currentMonth] = list; save(KEYS.transactions, transactions); }
+
+function addTransaction() {
+  const date         = document.getElementById('txDate').value;
+  const desc         = document.getElementById('txDesc').value.trim();
+  const value        = parseFloat(document.getElementById('txValue').value);
+  const installments = Math.max(1, parseInt(document.getElementById('txInstallments').value, 10) || 1);
+  const type         = document.getElementById('txType').value;
+  const cat          = document.getElementById('txCategory').value;
+  if (!date || !desc || isNaN(value) || value <= 0) { toast('Preencha todos os campos.'); return; }
+
+  const installValue = parseFloat((value / installments).toFixed(2));
+  const groupId = uid(); // liga todas as parcelas — útil para referência futura
+
+  // Distribui cada parcela no mês correto
+  const [y0, m0] = date.split('-').map(Number);
+  const day0 = parseInt(date.slice(8), 10);
+  for (let k = 0; k < installments; k++) {
+    // Avança k meses a partir do mês da data informada
+    let y = y0, m = m0 + k;
+    while (m > 12) { m -= 12; y++; }
+    const ym = `${y}-${String(m).padStart(2,'0')}`;
+    // Mantém o mesmo dia, mas limita ao último dia do mês de destino
+    // (ex: parcela lançada dia 31/jan → dia 28/fev em vez de uma data inválida)
+    const day = Math.min(day0, daysInMonth(ym));
+    const txDate = `${ym}-${String(day).padStart(2,'0')}`;
+
+    if (!transactions[ym]) transactions[ym] = [];
+    const label = installments > 1 ? `${desc} (${k+1}/${installments})` : desc;
+    transactions[ym].push({ id: uid(), groupId, date: txDate, desc: label, value: installValue, type, cat });
+    transactions[ym].sort((a,b) => a.date.localeCompare(b.date));
+  }
+
+  save(KEYS.transactions, transactions);
+  document.getElementById('txDesc').value         = '';
+  document.getElementById('txValue').value        = '';
+  document.getElementById('txInstallments').value = '1';
+
+  if (installments > 1) {
+    toast(`${installments} parcelas de ${fmt(installValue)} adicionadas!`);
+  } else {
+    toast('Transação adicionada!');
+  }
+  renderAll();
+}
+
+function deleteTransaction(id) {
+  const list = txList().filter(t => t.id !== id);
+  txSave(list);
+  renderAll();
+}
+
+// Retorna as opções de categoria disponíveis para um tipo de transação
+function categoryOptionsFor(type) {
+  if (type === 'receita') {
+    return [...planned.receita.map(p => ({ value: p.id, label: p.desc })), { value: 'outro', label: 'Outro' }];
+  }
+  if (type === 'fixo') {
+    return [...planned.fixo.map(p => ({ value: p.id, label: p.desc })), { value: 'outro', label: 'Outro' }];
+  }
+  return categories.map(c => ({ value: c.id, label: c.name }));
+}
+
+function updateTxCategory() {
+  const type = document.getElementById('txType').value;
+  const sel  = document.getElementById('txCategory');
+  sel.innerHTML = '';
+  categoryOptionsFor(type).forEach(o => {
+    const opt = document.createElement('option');
+    opt.value = o.value; opt.textContent = o.label;
+    sel.appendChild(opt);
+  });
+}
+
+// Escapa texto para uso seguro dentro de atributos HTML (value="...")
+function escapeAttr(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function renderTxTable() {
+  const body = document.getElementById('txTableBody');
+  const list = txList();
+  if (!list.length) { body.innerHTML = `<tr><td colspan="6" class="empty-state">Nenhuma transação este mês.</td></tr>`; return; }
+  body.innerHTML = list.slice().reverse().map(t => {
+    const isRec = t.type === 'receita';
+    const typeColor = t.type === 'receita' ? 'var(--green)' : t.type === 'fixo' ? 'var(--red)' : 'var(--gold)';
+    const catOptions = categoryOptionsFor(t.type);
+
+    const descInput = `<input type="text" class="tx-edit-input" value="${escapeAttr(t.desc)}"
+        onchange="updateTxField('${t.id}','desc',this.value)">`;
+
+    const catSelect = `<select class="tx-edit-select" onchange="updateTxField('${t.id}','cat',this.value)">
+        ${catOptions.map(o => `<option value="${o.value}" ${o.value === t.cat ? 'selected' : ''}>${o.label}</option>`).join('')}
+      </select>`;
+
+    const typeSelect = `<select class="tx-edit-select" style="border-color:${typeColor};color:${typeColor};font-weight:600"
+        onchange="updateTxField('${t.id}','type',this.value)">
+        <option value="receita" ${t.type === 'receita' ? 'selected' : ''}>Receita</option>
+        <option value="fixo" ${t.type === 'fixo' ? 'selected' : ''}>Fixo</option>
+        <option value="variavel" ${t.type === 'variavel' ? 'selected' : ''}>Variável</option>
+      </select>`;
+
+    return `<tr>
+      <td>${formatDate(t.date)}</td>
+      <td class="tx-cell">${descInput}</td>
+      <td class="tx-cell">${catSelect}</td>
+      <td class="tx-cell">${typeSelect}</td>
+      <td class="mono" style="text-align:right;color:${isRec?'var(--green)':'var(--red)'}">${isRec?'+':'-'} ${fmt(t.value)}</td>
+      <td><button class="btn btn-red btn-sm" onclick="deleteTransaction('${t.id}')">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+// Atualiza um campo (descrição, categoria ou tipo) de uma transação existente
+function updateTxField(id, field, value) {
+  const list = txList();
+  const t = list.find(x => x.id === id);
+  if (!t) return;
+
+  if (field === 'desc') {
+    t.desc = value.trim() || t.desc;
+  } else if (field === 'cat') {
+    t.cat = value;
+  } else if (field === 'type') {
+    t.type = value;
+    // ao mudar o tipo, a lista de categorias muda — escolhe a primeira opção válida
+    const opts = categoryOptionsFor(value);
+    t.cat = opts.length ? opts[0].value : '';
+  }
+
+  txSave(list);
+  renderAll();
+}
+
+
+function getCatName(type, catId) {
+  if (type === 'receita') { const p = planned.receita.find(x=>x.id===catId); return p?p.desc:'Outro'; }
+  if (type === 'fixo')    { const p = planned.fixo.find(x=>x.id===catId);    return p?p.desc:'Outro'; }
+  const c = categories.find(x=>x.id===catId); return c?c.name:'—';
+}
+
+function formatDate(d) {
+  if (!d) return '—';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+
+// ═══════════════════ PLANNED ═══════════════════
+function addPlanned(type) {
+  const descEl  = type==='receita' ? 'prDesc'  : 'pfDesc';
+  const valEl   = type==='receita' ? 'prValue' : 'pfValue';
+  const dayEl   = type==='receita' ? 'prDay'   : 'pfDay';
+  const desc  = document.getElementById(descEl).value.trim();
+  const value = parseFloat(document.getElementById(valEl).value);
+  const day   = parseInt(document.getElementById(dayEl).value) || 1;
+  if (!desc || isNaN(value)) { toast('Preencha descrição e valor.'); return; }
+  planned[type].push({ id: uid(), desc, value, day });
+  save(KEYS.planned, planned);
+  document.getElementById(descEl).value = '';
+  document.getElementById(valEl).value  = '';
+  document.getElementById(dayEl).value  = '';
+  toast('Item planejado salvo!');
+  renderAll();
+}
+
+function deletePlanned(type, id) {
+  planned[type] = planned[type].filter(x => x.id !== id);
+  save(KEYS.planned, planned);
+  renderAll();
+}
+
+function renderPlannedTables() {
+  ['receita','fixo'].forEach(type => {
+    const el = document.getElementById(`planned${type==='receita'?'Receitas':'Fixos'}`);
+    const list = planned[type];
+    if (!list.length) { el.innerHTML = `<div class="empty-state">Nenhum item.</div>`; return; }
+    el.innerHTML = `<table>
+      <thead><tr><th>Descrição</th><th>Dia</th><th style="text-align:right">Valor</th><th></th></tr></thead>
+      <tbody>${list.map(p=>`<tr>
+        <td>${p.desc}</td>
+        <td>${p.day}</td>
+        <td style="text-align:right">
+          <input type="number" step="0.01" min="0" value="${p.value}"
+            class="mono inline-edit-value" style="color:${type==='receita'?'var(--green)':'var(--red)'}"
+            onchange="updatePlannedValue('${type}','${p.id}', this.value)"
+            onkeydown="if(event.key==='Enter') this.blur()">
+        </td>
+        <td><button class="btn btn-red btn-sm" onclick="deletePlanned('${type}','${p.id}')">✕</button></td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  });
+}
+
+function updatePlannedValue(type, id, rawValue) {
+  const v = parseFloat(rawValue);
+  if (isNaN(v) || v < 0) { toast('Valor inválido.'); renderPlannedTables(); return; }
+  const item = planned[type].find(x => x.id === id);
+  if (!item) return;
+  item.value = v;
+  save(KEYS.planned, planned);
+  renderAll();
+}
+
+function addCategory() {
+  const name   = document.getElementById('catName').value.trim();
+  const budget = parseFloat(document.getElementById('catBudget').value);
+  const color  = document.getElementById('catColor').value;
+  if (!name || isNaN(budget)) { toast('Preencha nome e orçamento.'); return; }
+  categories.push({ id: uid(), name, budget, color });
+  save(KEYS.categories, categories);
+  document.getElementById('catName').value   = '';
+  document.getElementById('catBudget').value = '';
+  toast('Categoria adicionada!');
+  renderAll();
+}
+
+function deleteCategory(id) {
+  categories = categories.filter(c => c.id !== id);
+  save(KEYS.categories, categories);
+  renderAll();
+}
+
+function renderCategoriesTable() {
+  const el = document.getElementById('categoriesTable');
+  if (!categories.length) { el.innerHTML = `<div class="empty-state">Nenhuma categoria.</div>`; return; }
+  el.innerHTML = `<table>
+    <thead><tr><th>Cor</th><th>Categoria</th><th style="text-align:right">Orçamento</th><th style="text-align:right">Gasto no mês</th><th></th></tr></thead>
+    <tbody>${categories.map(c=>{
+      const spent = txList().filter(t=>t.type==='variavel'&&t.cat===c.id).reduce((a,t)=>a+t.value,0);
+      const pct = c.budget > 0 ? Math.min(100, spent/c.budget*100).toFixed(0) : 0;
+      const over = spent > c.budget;
+      return `<tr>
+        <td><span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${c.color};vertical-align:middle"></span></td>
+        <td>${c.name}</td>
+        <td style="text-align:right">
+          <input type="number" step="0.01" min="0" value="${c.budget}"
+            class="mono inline-edit-value"
+            onchange="updateCategoryBudget('${c.id}', this.value)"
+            onkeydown="if(event.key==='Enter') this.blur()">
+        </td>
+        <td class="mono" style="text-align:right;color:${over?'var(--red)':'var(--green)'}">${fmt(spent)} <span style="font-size:10px;color:var(--muted)">(${pct}%)</span></td>
+        <td><button class="btn btn-red btn-sm" onclick="deleteCategory('${c.id}')">✕</button></td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+function updateCategoryBudget(id, rawValue) {
+  const v = parseFloat(rawValue);
+  if (isNaN(v) || v < 0) { toast('Valor inválido.'); renderCategoriesTable(); return; }
+  const cat = categories.find(x => x.id === id);
+  if (!cat) return;
+  cat.budget = v;
+  save(KEYS.categories, categories);
+  renderAll();
+}
+
+function saveInitialBalance() {
+  meta.initialBalance[currentMonth] = parseFloat(document.getElementById('initialBalance').value) || 0;
+  meta.totalWealth      = parseFloat(document.getElementById('totalWealth').value) || 0;
+  meta.totalLiabilities = parseFloat(document.getElementById('totalLiabilities').value) || 0;
+  save(KEYS.meta, meta);
+  renderAll();
+}
+
+function loadMetaInputs() {
+  document.getElementById('initialBalance').value  = meta.initialBalance[currentMonth] ?? '';
+  document.getElementById('totalWealth').value      = meta.totalWealth ?? '';
+  document.getElementById('totalLiabilities').value = meta.totalLiabilities ?? '';
+}
+
+// ═══════════════════ CALC ═══════════════════
+function calcMonth() {
+  const list  = txList();
+  const ib    = meta.initialBalance[currentMonth] || 0;
+
+  // data de hoje, no formato YYYY-MM-DD, para comparação textual segura
+  const todayStr = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  })();
+
+  // ── REALIZADO: transações com data <= hoje (já aconteceram) ──
+  const realizadas = list.filter(t => t.date <= todayStr);
+  // ── FUTURO: transações com data > hoje (ainda vão acontecer) ──
+  const futuras     = list.filter(t => t.date >  todayStr);
+
+  const receitas  = realizadas.filter(t=>t.type==='receita').reduce((a,t)=>a+t.value,0);
+  const fixos     = realizadas.filter(t=>t.type==='fixo').reduce((a,t)=>a+t.value,0);
+  const variaveis = realizadas.filter(t=>t.type==='variavel').reduce((a,t)=>a+t.value,0);
+  const despesas  = fixos + variaveis;
+  const resultado = receitas - despesas;
+  const saldoAtual = ib + resultado; // caixa real, só com o que já aconteceu
+
+  // ── transações futuras já lançadas (não são "planejado", são transações concretas com data futura) ──
+  const receitasFuturas  = futuras.filter(t=>t.type==='receita').reduce((a,t)=>a+t.value,0);
+  const fixosFuturos     = futuras.filter(t=>t.type==='fixo').reduce((a,t)=>a+t.value,0);
+  const variaveisFuturas = futuras.filter(t=>t.type==='variavel').reduce((a,t)=>a+t.value,0);
+  const despesasFuturas  = fixosFuturos + variaveisFuturas;
+
+  const plReceitas = planned.receita.reduce((a,p)=>a+p.value,0);
+  const plFixos    = planned.fixo.reduce((a,p)=>a+p.value,0);
+  const plVariavel = categories.reduce((a,c)=>a+c.budget,0);
+  const plDespesas = plFixos + plVariavel;
+  const plResultado= plReceitas - plDespesas;
+
+  return { ib, receitas, fixos, variaveis, despesas, resultado, saldoAtual,
+           plReceitas, plFixos, plVariavel, plDespesas, plResultado,
+           todayStr, realizadas, futuras,
+           receitasFuturas, fixosFuturos, variaveisFuturas, despesasFuturas };
+}
+
+// ═══════════════════ DASHBOARD ═══════════════════
+function renderSummaryCards() {
+  const c = calcMonth();
+  const el = document.getElementById('summaryCards');
+  el.innerHTML = [
+    { label:'Saldo Atual', value: fmt(c.saldoAtual), sub: `Início: ${fmt(c.ib)}`, cls: c.saldoAtual>=0?'green':'red' },
+    { label:'Receitas',    value: fmt(c.receitas),   sub: `Planejado: ${fmt(c.plReceitas)}`, cls:'green' },
+    { label:'Gastos Fixos',value: fmt(c.fixos),      sub: `Planejado: ${fmt(c.plFixos)}`, cls:'red' },
+    { label:'Gastos Variáveis', value: fmt(c.variaveis), sub: `Orçamento: ${fmt(c.plVariavel)}`, cls:'gold' },
+    { label:'Resultado',   value: fmt(c.resultado),  sub: `Planejado: ${fmt(c.plResultado)}`, cls: c.resultado>=0?'green':'red' },
+  ].map(x=>`<div class="card">
+    <div class="card-label">${x.label}</div>
+    <div class="card-value ${x.cls}">${x.value}</div>
+    <div class="card-sub">${x.sub}</div>
+  </div>`).join('');
+}
+
+function renderMonthBar() {
+  const today = new Date();
+  const [cy,cm] = currentMonth.split('-').map(Number);
+  const days = daysInMonth(currentMonth);
+  const isCurrentMonth = (today.getFullYear()===cy && today.getMonth()+1===cm);
+  const dayNow = isCurrentMonth ? today.getDate() : days;
+  const pct = dayNow / days * 100;
+
+  document.getElementById('monthFill').style.width   = pct + '%';
+  document.getElementById('monthNowLine').style.left = pct + '%';
+  document.getElementById('monthPct').textContent    = `Dia ${dayNow} de ${days}`;
+  document.getElementById('monthDayLabel').textContent = `Dia ${dayNow}`;
+  document.getElementById('monthLastDay').textContent  = days;
+}
+
+// ═══════════════════ CHARTS ═══════════════════
+let charts = {};
+function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+function renderChartBalance() {
+  destroyChart('balance');
+  const [y,m] = currentMonth.split('-').map(Number);
+  const days   = daysInMonth(currentMonth);
+  const list   = txList();
+  const ib     = meta.initialBalance[currentMonth] || 0;
+
+  // daily balance
+  const today  = new Date();
+  const isNow  = (today.getFullYear()===y && today.getMonth()+1===m);
+  const maxDay = isNow ? today.getDate() : days;
+  const labels = Array.from({length:days},(_,i)=>i+1);
+
+  // compute cumulative per day
+  const dailyNet = new Array(days).fill(0);
+  list.forEach(t => {
+    const d = parseInt(t.date.split('-')[2]);
+    if (d >= 1 && d <= days) {
+      dailyNet[d-1] += t.type==='receita' ? t.value : -t.value;
+    }
+  });
+  const dailyBal = [];
+  let acc = ib;
+  for (let i = 0; i < days; i++) {
+    acc += dailyNet[i];
+    dailyBal.push(i+1 <= maxDay ? acc : null);
+  }
+
+  // linear regression on realized days
+  const xs = [], ys = [];
+  dailyBal.forEach((v,i) => { if (v !== null) { xs.push(i+1); ys.push(v); } });
+  let regLine = new Array(days).fill(null);
+  if (xs.length >= 2) {
+    const n = xs.length;
+    const sx = xs.reduce((a,b)=>a+b,0), sy = ys.reduce((a,b)=>a+b,0);
+    const sxy= xs.reduce((a,x,i)=>a+x*ys[i],0), sxx=xs.reduce((a,x)=>a+x*x,0);
+    const b  = (n*sxy - sx*sy)/(n*sxx - sx*sx);
+    const a  = (sy - b*sx)/n;
+    regLine = labels.map(x => a + b*x);
+  }
+
+  const ctx = document.getElementById('chartBalance').getContext('2d');
+  charts['balance'] = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label:'Saldo Real', data: dailyBal, borderColor:'#10B981', backgroundColor:'rgba(16,185,129,.1)', tension:.3, pointRadius:2, fill:true },
+        { label:'Tendência', data: regLine, borderColor:'#F59E0B', borderDash:[5,4], pointRadius:0, tension:.1, fill:false },
+      ]
+    },
+    options: chartOptions('R$')
+  });
+}
+
+function renderChartCategories() {
+  destroyChart('categories');
+  const list = txList().filter(t=>t.type==='variavel');
+  const data = categories.map(c=>({
+    label: c.name,
+    value: list.filter(t=>t.cat===c.id).reduce((a,t)=>a+t.value,0),
+    color: c.color,
+  })).filter(x=>x.value>0);
+
+  if (!data.length) { document.getElementById('chartCategories').parentElement.innerHTML += ''; return; }
+  const ctx = document.getElementById('chartCategories').getContext('2d');
+  charts['categories'] = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: data.map(x=>x.label),
+      datasets: [{ data: data.map(x=>x.value), backgroundColor: data.map(x=>x.color), borderWidth:0, hoverOffset:6 }]
+    },
+    options: { ...chartOptions(), plugins: { legend: { position:'bottom', labels: { color:'#8B949E', font:{size:11} } } }, cutout:'65%' }
+  });
+}
+
+function renderChartIncomeExpense() {
+  destroyChart('incomeExpense');
+  const c = calcMonth();
+  const ctx = document.getElementById('chartIncomeExpense').getContext('2d');
+  charts['incomeExpense'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Receitas','Fixos','Variáveis','Resultado'],
+      datasets: [
+        { label:'Realizado', data:[c.receitas, c.fixos, c.variaveis, c.resultado],
+          backgroundColor:['rgba(16,185,129,.7)','rgba(239,68,68,.7)','rgba(245,158,11,.7)', c.resultado>=0?'rgba(16,185,129,.7)':'rgba(239,68,68,.7)'], borderRadius:5 },
+        { label:'Planejado', data:[c.plReceitas, c.plFixos, c.plVariavel, c.plResultado],
+          backgroundColor:['rgba(16,185,129,.2)','rgba(239,68,68,.2)','rgba(245,158,11,.2)', c.plResultado>=0?'rgba(16,185,129,.2)':'rgba(239,68,68,.2)'], borderRadius:5, borderWidth:1,
+          borderColor:['rgba(16,185,129,.5)','rgba(239,68,68,.5)','rgba(245,158,11,.5)','rgba(16,185,129,.5)'] }
+      ]
+    },
+    options: chartOptions('R$')
+  });
+}
+
+function renderChartVariable() {
+  destroyChart('variable');
+  const data = categories.map(c=>{
+    const spent = txList().filter(t=>t.type==='variavel'&&t.cat===c.id).reduce((a,t)=>a+t.value,0);
+    return { name: c.name, spent, budget: c.budget, color: c.color };
+  }).filter(x=>x.budget>0||x.spent>0);
+  if (!data.length) return;
+  const ctx = document.getElementById('chartVariable').getContext('2d');
+  charts['variable'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: data.map(x=>x.name),
+      datasets: [
+        { label:'Gasto', data: data.map(x=>x.spent), backgroundColor: data.map(x=>x.color+'bb'), borderRadius:5 },
+        { label:'Orçamento', data: data.map(x=>x.budget), backgroundColor: data.map(x=>x.color+'33'), borderRadius:5, borderWidth:1, borderColor: data.map(x=>x.color) }
+      ]
+    },
+    options: { ...chartOptions('R$'), indexAxis:'y' }
+  });
+}
+
+function renderChartDre() {
+  destroyChart('dre');
+  const c = calcMonth();
+  const ctx = document.getElementById('chartDre').getContext('2d');
+  charts['dre'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Receita Bruta','Custos Fixos','Custos Variáveis','Resultado'],
+      datasets: [
+        { label:'Real',     data:[c.receitas,c.fixos,c.variaveis,c.resultado], backgroundColor:['#10B98166','#EF444466','#F59E0B66', c.resultado>=0?'#10B98166':'#EF444466'], borderRadius:6 },
+        { label:'Planejado',data:[c.plReceitas,c.plFixos,c.plVariavel,c.plResultado], backgroundColor:'transparent',
+          borderColor:['#10B981','#EF4444','#F59E0B', c.plResultado>=0?'#10B981':'#EF4444'], borderWidth:2, borderRadius:6, type:'bar' }
+      ]
+    },
+    options: chartOptions('R$')
+  });
+}
+
+function renderChartBalance2(d) {
+  destroyChart('balance2');
+
+  // d vem de renderBalanco() já calculado, garantindo que o gráfico bata 100% com as
+  // tabelas do BP (inclusive provisões com valor manual editado pelo usuário).
+  const ctx = document.getElementById('chartBalance2').getContext('2d');
+
+  // 6 barras: Atual-Ativo / Atual-Passivo+PL / Projetado-Ativo / Projetado-Passivo+PL /
+  //           Proj.+Próx.Meses-Ativo / Proj.+Próx.Meses-Passivo+PL
+  // Cada par (Ativo vs Passivo+PL) deve somar exatamente o mesmo total — é a equação
+  // contábil (Ativo = Passivo + PL) representada como duas barras espelhadas.
+  charts['balance2'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Atual — Ativo', 'Atual — Passivo + PL', 'Projetado — Ativo', 'Projetado — Passivo + PL', 'Proj. + Próx. Meses — Ativo', 'Proj. + Próx. Meses — Passivo + PL'],
+      datasets: [
+        { label: 'Caixa / Conta',              data: [d.caixaAtivo, 0, d.caixaAtivoProj, 0, d.caixaAtivoProj, 0],               backgroundColor: '#10B981bb', borderRadius: 4 },
+        { label: 'Investimentos / Bens',       data: [d.investimentos, 0, d.investimentos, 0, d.investimentos, 0],             backgroundColor: '#3B82F6bb', borderRadius: 4 },
+        { label: 'A Receber (futuro no mês)',  data: [d.ativoAReceber, 0, 0, 0, 0, 0],                                        backgroundColor: '#10B98166', borderRadius: 4 },
+        { label: 'A Receber (próx. meses)',    data: [0, 0, 0, 0, d.ativoAReceberFuturoMeses, 0],                              backgroundColor: '#10B98133', borderRadius: 4 },
+        { label: 'Dívidas / Descoberto',       data: [0, d.dividasManual + d.descoberto, 0, d.dividasManual + d.descobertoProj, 0, d.dividasManual + d.descobertoProj], backgroundColor: '#EF4444bb', borderRadius: 4 },
+        { label: 'A Pagar (futuro no mês)',    data: [0, d.passivoFuturo, 0, d.passivoFuturo, 0, d.passivoFuturo],            backgroundColor: '#EF444466', borderRadius: 4 },
+        { label: 'A Pagar (próx. meses)',      data: [0, 0, 0, 0, 0, d.passivoFuturoMeses],                                   backgroundColor: '#EF444433', borderRadius: 4 },
+        { label: 'Provisões planejadas',       data: [0, 0, 0, d.totalProvisoes, 0, d.totalProvisoes],                        backgroundColor: '#F59E0Bbb', borderRadius: 4 },
+        { label: 'Patrimônio Líquido',         data: [0, d.plAtual, 0, d.plProjetado, 0, d.plProjetadoFuturo],                backgroundColor: '#8B5CF6bb', borderRadius: 4 },
+      ]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#8B949E', font: { size: 11 }, boxWidth: 12 } },
+        tooltip: {
+          backgroundColor: '#21262D', borderColor: '#30363D', borderWidth: 1,
+          titleColor: '#E6EDF3', bodyColor: '#8B949E',
+          filter: item => item.raw !== 0,
+          callbacks: { label: ctx => ` ${ctx.dataset.label}: R$ ${(+ctx.raw).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` }
+        }
+      },
+      scales: {
+        x: { stacked: true, ticks: { color: '#8B949E', callback: v => 'R$ ' + v.toLocaleString('pt-BR') }, grid: { color: '#30363D' } },
+        y: { stacked: true, ticks: { color: '#8B949E', font: { size: 11 } }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+function chartOptions(unit='') {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { labels: { color: '#8B949E', font: { size: 11, family: 'Inter' } } },
+      tooltip: {
+        backgroundColor: '#21262D',
+        borderColor: '#30363D',
+        borderWidth: 1,
+        titleColor: '#E6EDF3',
+        bodyColor: '#8B949E',
+        callbacks: unit ? { label: ctx => ` ${unit} ${(+ctx.raw).toLocaleString('pt-BR',{minimumFractionDigits:2})}` } : {}
+      }
+    },
+    scales: {
+      x: { ticks:{ color:'#8B949E', font:{size:10} }, grid:{ color:'#30363D' } },
+      y: { ticks:{ color:'#8B949E', font:{size:10}, callback: v => unit ? unit+' '+v.toLocaleString('pt-BR') : v }, grid:{ color:'#30363D' } }
+    }
+  };
+}
+
+// ═══════════════════ DRE ═══════════════════
+function renderDRE() {
+  document.getElementById('dreMonthLabel').textContent = ymToLabel(currentMonth);
+  const c = calcMonth();
+  const list = txList();
+
+  function dreRow(label, real, planned, cls='', color='', indent=false) {
+    const delta = real - planned;
+    const isIncome = color === 'var(--green)';
+    // for income: positive delta is good; for expenses: negative delta (spent less) is good
+    const deltaGood = isIncome ? delta >= 0 : delta <= 0;
+    const deltaColor = delta === 0 ? 'var(--muted)' : (deltaGood ? 'var(--green)' : 'var(--red)');
+    const indentStyle = indent ? 'style="padding-left:22px"' : '';
+    return `<div class="dre-row ${cls}" ${indentStyle}>
+      <div class="dre-label">${label}</div>
+      <div class="dre-val-planned">${fmt(planned)}</div>
+      <div class="dre-val" style="color:${color||'var(--text)'}">${fmt(real)}</div>
+      <div class="dre-val-delta" style="color:${deltaColor}">${delta>0?'+':''}${(+delta).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+    </div>`;
+  }
+  function dreHeader(label) {
+    return `<div class="dre-row section-header">
+      <div class="dre-label" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted)">${label}</div>
+      <div class="dre-col-header">Planejado</div>
+      <div class="dre-col-header">Realizado</div>
+      <div class="dre-col-header">Δ</div>
+    </div>`;
+  }
+  function dreSubtotal(label, real, planned, color='') {
+    const delta = real - planned;
+    const deltaColor = delta === 0 ? 'var(--muted)' : (Math.abs(delta) < 0.01 ? 'var(--muted)' : (color==='var(--green)' ? (delta>=0?'var(--green)':'var(--red)') : (delta<=0?'var(--green)':'var(--red)')));
+    return `<div class="dre-row subtotal">
+      <div class="dre-label">${label}</div>
+      <div class="dre-val-planned">${fmt(planned)}</div>
+      <div class="dre-val" style="color:${color||'var(--text)'}">${fmt(real)}</div>
+      <div class="dre-val-delta" style="color:${deltaColor}">${delta>0?'+':''}${(+delta).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+    </div>`;
+  }
+
+  let html = '';
+
+  // ── RECEITAS
+  html += dreHeader('Receitas');
+  planned.receita.forEach(p => {
+    const real = list.filter(t=>t.type==='receita'&&t.cat===p.id).reduce((a,t)=>a+t.value,0);
+    html += dreRow(p.desc, real, p.value, '', 'var(--green)', true);
+  });
+  const otherRec = list.filter(t=>t.type==='receita'&&!planned.receita.find(p=>p.id===t.cat)).reduce((a,t)=>a+t.value,0);
+  if (otherRec > 0) html += dreRow('Outros', otherRec, 0, '', 'var(--green)', true);
+  html += dreSubtotal('(+) Total Receitas', c.receitas, c.plReceitas, 'var(--green)');
+
+  // ── GASTOS FIXOS
+  html += dreHeader('Gastos Fixos');
+  planned.fixo.forEach(p => {
+    const real = list.filter(t=>t.type==='fixo'&&t.cat===p.id).reduce((a,t)=>a+t.value,0);
+    html += dreRow(p.desc, real, p.value, '', 'var(--red)', true);
+  });
+  const otherFix = list.filter(t=>t.type==='fixo'&&!planned.fixo.find(p=>p.id===t.cat)).reduce((a,t)=>a+t.value,0);
+  if (otherFix > 0) html += dreRow('Outros', otherFix, 0, '', 'var(--red)', true);
+  html += dreSubtotal('(−) Total Fixos', c.fixos, c.plFixos, 'var(--red)');
+
+  // ── GASTOS VARIÁVEIS
+  html += dreHeader('Gastos Variáveis');
+  categories.forEach(cat => {
+    const spent = list.filter(t=>t.type==='variavel'&&t.cat===cat.id).reduce((a,t)=>a+t.value,0);
+    const pct = cat.budget > 0 ? Math.round(spent/cat.budget*100) : 0;
+    const label = `<span style="display:inline-flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:50%;background:${cat.color};flex-shrink:0"></span>${cat.name}</span>`;
+    html += dreRow(label, spent, cat.budget, '', 'var(--gold)', true);
+  });
+  html += dreSubtotal('(−) Total Variáveis', c.variaveis, c.plVariavel, 'var(--gold)');
+
+  // ── RESULTADO
+  const resClass = c.resultado >= 0 ? 'total' : 'total-red';
+  const resColor = c.resultado >= 0 ? 'var(--green)' : 'var(--red)';
+  const resDelta = c.resultado - c.plResultado;
+  const resDeltaColor = resDelta >= 0 ? 'var(--green)' : 'var(--red)';
+  html += `<div class="dre-row ${resClass}">
+    <div class="dre-label">(=) Resultado do Período</div>
+    <div class="dre-val-planned">${fmt(c.plResultado)}</div>
+    <div class="dre-val" style="color:${resColor}">${fmt(c.resultado)}</div>
+    <div class="dre-val-delta" style="color:${resDeltaColor}">${resDelta>0?'+':''}${(+resDelta).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+  </div>`;
+
+  document.getElementById('dreTable').innerHTML = html;
+  renderChartDre();
+}
+
+// Calcula as provisões (fixos + variáveis ainda não lançados), respeitando tanto o
+// valor automático (orçado − já gasto) quanto um valor manual que o usuário pode
+// digitar para "quanto ainda penso que vou gastar até o fim do mês".
+function computeProvisions() {
+  const list = txList();
+
+  const provisoesFixo = planned.fixo.map(p => {
+    const pago      = list.filter(t => t.type === 'fixo' && t.cat === p.id).reduce((a, t) => a + t.value, 0);
+    const autoFalta  = Math.max(0, p.value - pago);
+    const hasManual  = typeof p.provisaoManual === 'number';
+    const falta      = hasManual ? p.provisaoManual : autoFalta;
+    const included   = p.incluirProvisao !== false; // padrão: incluído
+    return { id: p.id, desc: p.desc, planejado: p.value, pago, autoFalta, falta, hasManual, included };
+  }).filter(x => x.autoFalta > 0 || x.hasManual);
+
+  const provisoesVar = categories.map(cat => {
+    const gasto     = list.filter(t => t.type === 'variavel' && t.cat === cat.id).reduce((a, t) => a + t.value, 0);
+    const autoFalta = Math.max(0, cat.budget - gasto);
+    const hasManual = typeof cat.provisaoManual === 'number';
+    const falta     = hasManual ? cat.provisaoManual : autoFalta;
+    const included  = cat.incluirProvisao !== false; // padrão: incluído
+    return { id: cat.id, desc: cat.name, color: cat.color, orcamento: cat.budget, gasto, autoFalta, falta, hasManual, included };
+  }).filter(x => x.autoFalta > 0 || x.hasManual);
+
+  const totalProvFixo  = provisoesFixo.filter(x => x.included).reduce((a, x) => a + x.falta, 0);
+  const totalProvVar   = provisoesVar.filter(x => x.included).reduce((a, x) => a + x.falta, 0);
+  const totalProvisoes = totalProvFixo + totalProvVar;
+
+  return { provisoesFixo, provisoesVar, totalProvFixo, totalProvVar, totalProvisoes };
+}
+
+// Atualiza (ou limpa, se o campo for esvaziado) o valor manual de provisão de um item.
+function setProvisionManualValue(kind, id, rawValue) {
+  const v = rawValue === '' ? NaN : parseFloat(rawValue);
+  if (kind === 'fixo') {
+    const p = planned.fixo.find(x => x.id === id);
+    if (!p) return;
+    if (isNaN(v)) delete p.provisaoManual; else p.provisaoManual = Math.max(0, v);
+    save(KEYS.planned, planned);
+  } else {
+    const cat = categories.find(x => x.id === id);
+    if (!cat) return;
+    if (isNaN(v)) delete cat.provisaoManual; else cat.provisaoManual = Math.max(0, v);
+    save(KEYS.categories, categories);
+  }
+  renderBalanco();
+}
+
+// ═══════════════════ CDI (Banco Central do Brasil) ═══════════════════
+// Série SGS 4391 = CDI mensal (% ao mês). Endpoint público, sem chave, com CORS liberado.
+// ═══════════════════ CDI (taxa manual) ═══════════════════
+function getCdiRate() {
+  const pct = (meta.cdiManualPct !== undefined && meta.cdiManualPct !== null)
+    ? meta.cdiManualPct : 0.90;
+  return { monthlyPct: pct, monthlyRate: pct / 100 };
+}
+
+function saveCdiManual() {
+  const el = document.getElementById('cdiManualInput');
+  if (!el) return;
+  const v = parseFloat(el.value.replace(',', '.'));
+  if (isNaN(v) || v < 0 || v > 5) { toast('Taxa inválida — use % ao mês (ex: 0,83 para ~10% a.a.)'); return; }
+  meta.cdiManualPct = v;
+  save(KEYS.meta, meta);
+  renderCarObligations();
+  toast(`Taxa definida em ${v.toFixed(2).replace('.', ',')}% a.m.`);
+}
+
+// ═══════════════════ PROVISÃO CARRO: IPVA / LICENCIAMENTO / SEGURO / REVISÃO ═══════════════════
+// Cada obrigação pode ser parcelada: gera uma lista de parcelas (mês/ano + valor).
+// Todas as parcelas de todas as obrigações formam um único cronograma de saídas do "fundo do carro".
+// O PMT é o valor constante que, depositado todo mês a partir de hoje (rendendo a taxa de desconto),
+// mantém o saldo do fundo sempre ≥ 0 até a última parcela.
+
+function addCarObligation() {
+  const desc    = document.getElementById('carObrName').value.trim();
+  const value   = parseFloat(document.getElementById('carObrValue').value);
+  const numInst = parseInt(document.getElementById('carObrInstallments').value, 10) || 1;
+  const interval= parseInt(document.getElementById('carObrInterval').value, 10) || 1;
+  const firstYM = document.getElementById('carObrDue').value; // "yyyy-mm"
+  if (!desc || isNaN(value) || value <= 0) { toast('Preencha descrição e valor da parcela.'); return; }
+  if (!firstYM) { toast('Escolha o mês da 1ª parcela.'); return; }
+  if (numInst < 1) { toast('Número de parcelas deve ser ao menos 1.'); return; }
+
+  carObligations.push({
+    id: uid(), desc, value,
+    installments: numInst,
+    intervalMonths: interval,
+    firstYM, // "yyyy-mm"
+  });
+  save(KEYS.carObligations, carObligations);
+  document.getElementById('carObrName').value          = '';
+  document.getElementById('carObrValue').value         = '';
+  document.getElementById('carObrInstallments').value  = '1';
+  document.getElementById('carObrInterval').value      = '1';
+  document.getElementById('carObrDue').value           = '';
+  toast('Obrigação adicionada!');
+  renderCarObligations();
+}
+
+function deleteCarObligation(id) {
+  carObligations = carObligations.filter(o => o.id !== id);
+  save(KEYS.carObligations, carObligations);
+  renderCarObligations();
+}
+
+// Converte "yyyy-mm" em índice absoluto de mês (para aritmética simples)
+function ymToIndex(ymStr) {
+  const [y, m] = ymStr.split('-').map(Number);
+  return y * 12 + (m - 1);
+}
+function indexToYM(idx) {
+  const y = Math.floor(idx / 12), m = idx % 12;
+  return { y, m: m + 1 };
+}
+function monthLabel(idx) {
+  const { y, m } = indexToYM(idx);
+  const names = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  return `${names[m-1]}/${y}`;
+}
+
+// Expande uma obrigação em parcelas individuais: [{ monthIndex, value, desc }]
+function expandInstallments(o) {
+  const startIdx = ymToIndex(o.firstYM);
+  const list = [];
+  for (let k = 0; k < o.installments; k++) {
+    list.push({
+      monthIndex: startIdx + k * o.intervalMonths,
+      value: o.value,
+      desc: o.installments > 1 ? `${o.desc} (${k+1}/${o.installments})` : o.desc,
+    });
+  }
+  return list;
+}
+
+// Soma tudo que já foi lançado nas transações como "Carro / Seguro / IPVA" (categoria f_carro)
+// ATÉ o mês passado como parâmetro (inclusive). Default: mês selecionado no app.
+function getCarSavedTotal(upToYM) {
+  const upTo = upToYM || currentMonth;
+  let total = 0;
+  Object.keys(transactions).forEach(ym => {
+    if (ym <= upTo) {
+      (transactions[ym] || []).forEach(t => {
+        if (t.type === 'fixo' && t.cat === SEED.fCarro) total += t.value;
+      });
+    }
+  });
+  return total;
+}
+
+// Simula o saldo do fundo mês a mês, dado um PMT constante, taxa mensal i, saldo inicial e cronograma de saídas.
+// Mês 0 = mês atual (hoje). Em cada mês: deposita PMT, rende juros, depois paga as parcelas que vencem naquele mês.
+// Retorna { schedule: [{monthIndex, deposit, interest, payments, balance}], minBalance, finalBalance }
+function simulateFund(pmt, i, initialBalance, cashflowsByMonth, startIdx, endIdx) {
+  let balance = initialBalance;
+  let minBalance = balance;
+  const schedule = [];
+  for (let idx = startIdx; idx <= endIdx; idx++) {
+    const deposit  = pmt;
+    balance += deposit;
+    const interest = balance * i;
+    balance += interest;
+    const payments = cashflowsByMonth[idx] || 0;
+    balance -= payments;
+    if (balance < minBalance) minBalance = balance;
+    schedule.push({ monthIndex: idx, deposit, interest, payments, balance });
+  }
+  return { schedule, minBalance, finalBalance: balance };
+}
+
+// Busca binária pelo menor PMT que mantém o saldo do fundo sempre ≥ 0 ao longo de todo o cronograma.
+function findRequiredPMT(i, initialBalance, cashflowsByMonth, startIdx, endIdx) {
+  let lo = 0, hi = 100000;
+  // garante que hi é suficiente (saldo nunca negativo)
+  for (let iter = 0; iter < 60; iter++) {
+    const mid = (lo + hi) / 2;
+    const { minBalance } = simulateFund(mid, i, initialBalance, cashflowsByMonth, startIdx, endIdx);
+    if (minBalance < -0.005) lo = mid; else hi = mid;
+  }
+  return hi;
+}
+
+function renderCarObligations() {
+  const tableEl = document.getElementById('carObligationsTable');
+  if (!tableEl) return;
+
+  const rate = getCdiRate();
+  const inp = document.getElementById('cdiManualInput');
+  if (inp && !inp._focused) inp.value = rate.monthlyPct.toFixed(2).replace('.', ',');
+  const lbl = document.getElementById('cdiRateLabel');
+  if (lbl) lbl.textContent = `${rate.monthlyPct.toFixed(2).replace('.', ',')}% a.m.`;
+
+  const savedTotal = getCarSavedTotal(currentMonth);
+  const todayIdx = ymToIndex(currentMonth); // referência = mês selecionado no app, não data real
+  const savedUpToLbl = document.getElementById('carSavedUpToLabel');
+  if (savedUpToLbl) savedUpToLbl.textContent = ymToLabel(currentMonth);
+
+  if (!carObligations.length) {
+    tableEl.innerHTML = `<div class="empty-state">Nenhuma obrigação cadastrada. Adicione o IPVA, Licenciamento, Seguro e Revisão acima.</div>`;
+    document.getElementById('carTotalDue').textContent     = fmt(0);
+    document.getElementById('carAlreadySaved').textContent = fmt(savedTotal);
+    document.getElementById('carPmtTotal').textContent     = fmt(0);
+    document.getElementById('carScheduleTable').innerHTML  = '';
+    return;
+  }
+
+  // expande todas as obrigações em parcelas, junta tudo num único cronograma de saídas
+  let allInstallments = [];
+  carObligations.forEach(o => { allInstallments = allInstallments.concat(expandInstallments(o)); });
+  allInstallments.sort((a, b) => a.monthIndex - b.monthIndex);
+
+  const cashflowsByMonth = {};
+  allInstallments.forEach(p => { cashflowsByMonth[p.monthIndex] = (cashflowsByMonth[p.monthIndex] || 0) + p.value; });
+
+  const totalDue = allInstallments.reduce((a, p) => a + p.value, 0);
+  const lastIdx  = Math.max(...allInstallments.map(p => p.monthIndex), todayIdx);
+
+  // só considera parcelas que ainda não venceram (mês atual ou futuro) para o cronograma de financiamento
+  const futureCashflows = {};
+  let pastDue = 0;
+  Object.keys(cashflowsByMonth).forEach(k => {
+    const idx = parseInt(k, 10);
+    if (idx >= todayIdx) futureCashflows[idx] = cashflowsByMonth[idx];
+    else pastDue += cashflowsByMonth[idx];
+  });
+
+  const i = rate.monthlyRate;
+  const pmt = findRequiredPMT(i, savedTotal, futureCashflows, todayIdx, lastIdx);
+  const { schedule } = simulateFund(pmt, i, savedTotal, futureCashflows, todayIdx, lastIdx);
+
+  // linhas por obrigação (resumo, não por parcela individual — senão fica longo demais)
+  const rows = [...carObligations].sort((a,b) => ymToIndex(a.firstYM) - ymToIndex(b.firstYM)).map(o => {
+    const startIdx = ymToIndex(o.firstYM);
+    const endIdx   = startIdx + (o.installments - 1) * o.intervalMonths;
+    const total    = o.value * o.installments;
+    const status   = endIdx < todayIdx ? 'concluído' : (startIdx <= todayIdx && endIdx >= todayIdx ? 'em andamento' : 'futuro');
+    const statusColor = status === 'concluído' ? 'var(--muted)' : status === 'em andamento' ? 'var(--gold)' : 'var(--blue)';
+    return `<tr>
+      <td>
+        <div>${o.desc}</div>
+        <div style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-top:2px">
+          ${o.installments}x de ${fmt(o.value)}${o.intervalMonths > 1 ? ` (a cada ${o.intervalMonths} meses)` : ''} ·
+          ${monthLabel(startIdx)}${o.installments > 1 ? ` → ${monthLabel(endIdx)}` : ''} ·
+          <span style="color:${statusColor}">${status}</span>
+        </div>
+      </td>
+      <td class="mono" style="text-align:right">${fmt(total)}</td>
+      <td style="text-align:center">${monthLabel(startIdx)}</td>
+      <td style="text-align:center">${monthLabel(endIdx)}</td>
+      <td><button class="btn btn-red btn-sm" onclick="deleteCarObligation('${o.id}')" title="Excluir">✕</button></td>
+    </tr>`;
+  }).join('');
+
+  tableEl.innerHTML = `<table>
+    <thead><tr>
+      <th>Obrigação</th>
+      <th style="text-align:right">Total</th>
+      <th style="text-align:center">1ª parcela</th>
+      <th style="text-align:center">Última parcela</th>
+      <th></th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div style="padding:8px 14px;font-size:11px;color:var(--muted);border-top:1px solid var(--border)">
+    ${pastDue > 0 ? `⚠ ${fmt(pastDue)} em parcelas já vencidas não entraram no cálculo do PMT (pague separadamente). ` : ''}
+    Cronograma considerado: ${monthLabel(todayIdx)} até ${monthLabel(lastIdx)} (${lastIdx - todayIdx + 1} meses).
+  </div>`;
+
+  document.getElementById('carTotalDue').textContent     = fmt(totalDue);
+  document.getElementById('carAlreadySaved').textContent = fmt(savedTotal);
+  document.getElementById('carPmtTotal').textContent     = fmt(pmt);
+  const pmtFromLbl = document.getElementById('carPmtFromLabel');
+  if (pmtFromLbl) pmtFromLbl.textContent = monthLabel(todayIdx);
+
+  // cronograma detalhado (mês a mês)
+  const schedRows = schedule.map(s => {
+    const payDesc = (cashflowsByMonth[s.monthIndex])
+      ? allInstallments.filter(p => p.monthIndex === s.monthIndex).map(p => p.desc).join(', ')
+      : '';
+    return `<tr>
+      <td>${monthLabel(s.monthIndex)}</td>
+      <td class="mono" style="text-align:right;color:var(--green)">+${fmt(s.deposit)}</td>
+      <td class="mono" style="text-align:right;color:var(--blue)">+${fmt(s.interest)}</td>
+      <td class="mono" style="text-align:right;color:var(--red)">${s.payments > 0 ? '−'+fmt(s.payments) : '—'}</td>
+      <td style="font-size:10px;color:var(--muted)">${payDesc}</td>
+      <td class="mono" style="text-align:right;font-weight:600">${fmt(s.balance)}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('carScheduleTable').innerHTML = `<table>
+    <thead><tr>
+      <th>Mês</th><th style="text-align:right">Depósito</th><th style="text-align:right">Juros</th>
+      <th style="text-align:right">Saída</th><th>Obrigação paga</th><th style="text-align:right">Saldo do fundo</th>
+    </tr></thead>
+    <tbody>${schedRows}</tbody>
+  </table>`;
+}
+
+// retorna o mês/ano "atual" no formato yyyy-mm, baseado na data real de hoje (não no mês selecionado no app)
+function currentDateYM() {
+  const t = new Date();
+  return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}`;
+}
+
+// ═══════════════════ BALANÇO PATRIMONIAL ═══════════════════
+// Soma as transações JÁ LANÇADAS em meses POSTERIORES ao mês analisado
+// (ex: observando junho, mas já existem lançamentos em agosto/setembro).
+// Usado no 3º balanço (Projetado + Próximos Meses).
+function getFutureMonthsTotals(afterYM) {
+  let receita = 0, fixo = 0, variavel = 0;
+  Object.keys(transactions).forEach(ym => {
+    if (ym > afterYM) {
+      (transactions[ym] || []).forEach(t => {
+        if (t.type === 'receita') receita += t.value;
+        else if (t.type === 'fixo') fixo += t.value;
+        else if (t.type === 'variavel') variavel += t.value;
+      });
+    }
+  });
+  return { receita, fixo, variavel, despesa: fixo + variavel };
+}
+
+function renderBalanco() {
+  const today = new Date();
+  const [cy, cm] = currentMonth.split('-').map(Number);
+  document.getElementById('balDateLabel').textContent = today.toLocaleDateString('pt-BR');
+  document.getElementById('balMonthLabel').textContent = ymToLabel(currentMonth);
+
+  const c            = calcMonth();
+  const investimentos = meta.totalWealth      || 0;
+  const dividasManual = meta.totalLiabilities || 0;
+  const list          = txList();
+
+  // ── BP ATUAL (D0) ────────────────────────────────────────────
+  // Caixa só reflete o que JÁ aconteceu (transações com data <= hoje)
+  const caixaAtual   = c.saldoAtual;
+  const caixaAtivo   = Math.max(0, caixaAtual);
+  const descoberto   = Math.max(0, -caixaAtual);
+
+  // ── TRANSAÇÕES FUTURAS JÁ LANÇADAS (data > hoje) ─────────────
+  // Despesas futuras (fixo + variável) → entram como PASSIVO (obrigação assumida, ainda não paga)
+  // Receitas futuras → entram como ATIVO A RECEBER (fora do caixa)
+  const passivoFuturo = c.fixosFuturos + c.variaveisFuturas;
+  const ativoAReceber  = c.receitasFuturas;
+
+  const ativoAtual   = caixaAtivo + investimentos + ativoAReceber;
+  const passivoAtual = descoberto + dividasManual + passivoFuturo;
+  const plAtual      = ativoAtual - passivoAtual;
+
+  // ── PROVISÕES DE PLANEJAMENTO (o que falta do orçamento, ainda nem foi lançado) ──
+  // Receitas planejadas ainda a receber (considerando realizado + futuro já lançado)
+  const receitasContabilizadas = c.receitas + c.receitasFuturas;
+  const receitasPlanejadas     = planned.receita.reduce((a, p) => a + p.value, 0);
+  const receitasAReceberPlan   = Math.max(0, receitasPlanejadas - receitasContabilizadas);
+
+  const prov = computeProvisions();
+  const { provisoesFixo, provisoesVar, totalProvFixo, totalProvVar, totalProvisoes } = prov;
+
+  // ── BP PROJETADO (fim do mês) ────────────────────────────────
+  // Caixa projetado = caixa atual + receitas futuras já lançadas + receitas planejadas que ainda nem foram lançadas
+  const caixaProjetado   = caixaAtual + ativoAReceber + receitasAReceberPlan;
+  const caixaAtivoProj   = Math.max(0, caixaProjetado);
+  const descobertoProj   = Math.max(0, -caixaProjetado);
+  const ativoProjetado   = caixaAtivoProj + investimentos;
+  // Passivo projetado = descoberto + dívidas + passivo futuro já lançado + provisões do que falta planejar
+  const passivoProjetado = descobertoProj + dividasManual + passivoFuturo + totalProvisoes;
+  const plProjetado      = ativoProjetado - passivoProjetado;
+
+  // ── BP PROJETADO + PRÓXIMOS MESES ─────────────────────────────
+  // Além do que está previsto até o fim do mês analisado, soma também as
+  // transações que já foram lançadas em meses futuros (além do mês observado).
+  // Esses valores ainda não são caixa — entram como "a receber" / "a pagar" extra-caixa,
+  // assim como já é feito com as transações futuras dentro do próprio mês.
+  const futureMonths            = getFutureMonthsTotals(currentMonth);
+  const ativoAReceberFuturoMeses  = futureMonths.receita;
+  const passivoFuturoMeses        = futureMonths.despesa;
+  const ativoProjetadoFuturo    = ativoProjetado + ativoAReceberFuturoMeses;
+  const passivoProjetadoFuturo  = passivoProjetado + passivoFuturoMeses;
+  const plProjetadoFuturo       = ativoProjetadoFuturo - passivoProjetadoFuturo;
+
+  // ── helper para renderizar um BP ────────────────────────────
+  function renderBP(elId, caixa, ativo, passivo, pl, extraAtivo = '', extraPassivo = '') {
+    const caixaA = Math.max(0, caixa);
+    const desc   = Math.max(0, -caixa);
+    document.getElementById(elId).innerHTML = `
+      <div class="bal-block">
+        <div class="bal-col-ativo">
+          <div class="bal-section">
+            <div class="bal-header">ATIVO</div>
+            <div class="dre-row">
+              <div class="dre-label">Circulante — Caixa / Conta</div>
+              <div class="dre-val" style="color:${caixaA>0?'var(--green)':'var(--muted)'}">${fmt(caixaA)}</div>
+            </div>
+            <div class="dre-row">
+              <div class="dre-label">Não Circulante — Investimentos / Bens</div>
+              <div class="dre-val blue">${fmt(investimentos)}</div>
+            </div>
+            ${extraAtivo}
+            <div class="dre-row subtotal" style="margin-top:auto">
+              <div class="dre-label">Total do Ativo</div>
+              <div class="dre-val">${fmt(ativo)}</div>
+            </div>
+          </div>
+        </div>
+        <div class="bal-col-pp">
+          <div class="bal-section">
+            <div class="bal-header">PASSIVO</div>
+            ${desc > 0 ? `<div class="dre-row"><div class="dre-label">Descoberto bancário</div><div class="dre-val red">${fmt(desc)}</div></div>` : ''}
+            ${dividasManual > 0 ? `<div class="dre-row"><div class="dre-label">Dívidas / Financiamentos</div><div class="dre-val red">${fmt(dividasManual)}</div></div>` : ''}
+            ${extraPassivo}
+            ${(desc === 0 && dividasManual === 0 && !extraPassivo) ? `<div class="dre-row"><div class="dre-label" style="color:var(--muted)">Sem passivos</div><div class="dre-val">—</div></div>` : ''}
+            <div class="dre-row subtotal">
+              <div class="dre-label">Total do Passivo</div>
+              <div class="dre-val red">${fmt(passivo)}</div>
+            </div>
+          </div>
+          <div class="bal-section">
+            <div class="bal-header">PATRIMÔNIO LÍQUIDO</div>
+            <div class="dre-row ${pl>=0?'total':'total-red'}">
+              <div class="dre-label">PL = Ativo − Passivo</div>
+              <div class="dre-val" style="color:${pl>=0?'var(--green)':'var(--red)'}">${fmt(pl)}</div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // ── BP Atual: caixa só do realizado + transações futuras já lançadas entram fora do caixa ──
+  const ativoAReceberHTML = ativoAReceber > 0
+    ? `<div class="dre-row" style="background:rgba(16,185,129,.05)">
+        <div class="dre-label" style="color:var(--green)">A Receber — Transações futuras lançadas</div>
+        <div class="dre-val" style="color:var(--green)">${fmt(ativoAReceber)}</div>
+       </div>`
+    : '';
+  const passivoFuturoHTML = passivoFuturo > 0
+    ? `<div class="dre-row" style="background:rgba(239,68,68,.05)">
+        <div class="dre-label" style="color:var(--red)">A Pagar — Transações futuras lançadas</div>
+        <div class="dre-val" style="color:var(--red)">${fmt(passivoFuturo)}</div>
+       </div>`
+    : '';
+  renderBP('balTable', caixaAtual, ativoAtual, passivoAtual, plAtual, ativoAReceberHTML, passivoFuturoHTML);
+
+  // ── BP Projetado: transações futuras já "viraram caixa" (chegou a data) + provisões de planejamento ainda no passivo ──
+  const provPassivoHTML = totalProvisoes > 0
+    ? `<div class="dre-row" style="background:rgba(245,158,11,.05)">
+        <div class="dre-label" style="color:var(--gold)">Provisões — Planejado ainda não lançado</div>
+        <div class="dre-val" style="color:var(--gold)">${fmt(totalProvisoes)}</div>
+       </div>`
+    : '';
+  renderBP('balProjectedTable', caixaProjetado, ativoProjetado, passivoProjetado, plProjetado, '', provPassivoHTML);
+
+  // ── BP Projetado + Próximos Meses: tudo do BP Projetado + transações já lançadas em meses futuros ──
+  const ativoAReceberFuturoMesesHTML = ativoAReceberFuturoMeses > 0
+    ? `<div class="dre-row" style="background:rgba(16,185,129,.05)">
+        <div class="dre-label" style="color:var(--green)">A Receber — Próximos meses (já lançado)</div>
+        <div class="dre-val" style="color:var(--green)">${fmt(ativoAReceberFuturoMeses)}</div>
+       </div>`
+    : '';
+  const passivoFuturoMesesHTML = passivoFuturoMeses > 0
+    ? `<div class="dre-row" style="background:rgba(239,68,68,.05)">
+        <div class="dre-label" style="color:var(--red)">A Pagar — Próximos meses (já lançado)</div>
+        <div class="dre-val" style="color:var(--red)">${fmt(passivoFuturoMeses)}</div>
+       </div>`
+    : '';
+  renderBP('balProjectedFutureTable', caixaProjetado, ativoProjetadoFuturo, passivoProjetadoFuturo, plProjetadoFuturo,
+    ativoAReceberFuturoMesesHTML, provPassivoHTML + passivoFuturoMesesHTML);
+
+  // ── HEADLINE CARDS ──────────────────────────────────────────
+  document.getElementById('balSummaryCards').innerHTML = [
+    { label: 'PL Atual',           value: fmt(plAtual),     sub: 'Patrimônio hoje (já considera lançamentos futuros)', cls: plAtual     >= 0 ? 'green' : 'red' },
+    { label: 'PL Projetado',       value: fmt(plProjetado), sub: `Após pagar tudo planejado até fim de ${ymToLabel(currentMonth)}`, cls: plProjetado >= 0 ? 'green' : 'red' },
+    { label: 'PL Proj. + Próx. Meses', value: fmt(plProjetadoFuturo), sub: 'Incluindo transações já lançadas em meses futuros', cls: plProjetadoFuturo >= 0 ? 'green' : 'red' },
+    { label: 'A Pagar / A Receber',value: `${fmt(passivoFuturo)} / ${fmt(ativoAReceber)}`, sub: 'Transações futuras já lançadas (mês atual)', cls: 'blue' },
+    { label: 'Margem Disponível',  value: fmt(plProjetado), sub: 'Quanto pode gastar livremente',     cls: plProjetado >= 0 ? 'green' : 'red' },
+  ].map(x => `<div class="card">
+    <div class="card-label">${x.label}</div>
+    <div class="card-value ${x.cls}">${x.value}</div>
+    <div class="card-sub">${x.sub}</div>
+  </div>`).join('');
+
+  // ── TABELA DE PROVISÕES ─────────────────────────────────────
+  let provHTML = '';
+
+  // mostra transações futuras já lançadas, separadas das provisões de planejamento
+  const futurasFixo = c.futuras.filter(t => t.type === 'fixo');
+  const futurasVar  = c.futuras.filter(t => t.type === 'variavel');
+  const futurasRec  = c.futuras.filter(t => t.type === 'receita');
+
+  if (futurasFixo.length || futurasVar.length || futurasRec.length) {
+    provHTML += `<div class="bal-header" style="color:var(--blue)">Transações Futuras Já Lançadas</div>`;
+    [...futurasRec, ...futurasFixo, ...futurasVar].forEach(t => {
+      const isRec = t.type === 'receita';
+      provHTML += `<div class="dre-row">
+        <div class="dre-label">
+          ${t.desc}
+          <div style="font-size:10px;color:var(--muted);font-family:var(--mono)">${formatDate(t.date)}</div>
+        </div>
+        <div class="dre-val" style="color:${isRec?'var(--green)':'var(--red)'}">${isRec?'+':'-'} ${fmt(t.value)}</div>
+      </div>`;
+    });
+    provHTML += `<div class="dre-row subtotal">
+      <div class="dre-label">Saldo Líquido Futuro</div>
+      <div class="dre-val" style="color:${(ativoAReceber - passivoFuturo) >= 0 ? 'var(--green)' : 'var(--red)'}">${fmtSigned(ativoAReceber - passivoFuturo)}</div>
+    </div>`;
+  }
+
+  if (provisoesFixo.length) {
+    provHTML += `<div class="bal-header">Fixos Planejados Ainda Não Lançados</div>`;
+    provisoesFixo.forEach(p => {
+      const pct = p.planejado > 0 ? Math.round(p.pago / p.planejado * 100) : 0;
+      provHTML += `<div class="dre-row" style="align-items:flex-start;flex-wrap:wrap;gap:10px;${p.included ? '' : 'opacity:.4'}">
+        <div class="dre-label" style="display:flex;align-items:flex-start;gap:8px">
+          <input type="checkbox" class="prov-check" ${p.included ? 'checked' : ''}
+            onchange="toggleProvisionItem('fixo','${p.id}')"
+            style="margin-top:3px;flex-shrink:0;accent-color:var(--red);cursor:pointer" title="Incluir na provisão do BP Projetado">
+          <div style="flex:1;min-width:0">
+            ${p.desc}
+            <div style="height:3px;background:var(--surface2);border-radius:9999px;margin-top:5px;width:100%;max-width:120px">
+              <div style="height:3px;border-radius:9999px;background:var(--red);width:${pct}%"></div>
+            </div>
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;white-space:nowrap">Ainda vou gastar</div>
+          <input type="number" class="prov-manual-input" step="0.01" min="0"
+            value="${p.falta.toFixed(2)}"
+            onchange="setProvisionManualValue('fixo','${p.id}', this.value)"
+            onkeydown="if(event.key==='Enter') this.blur()"
+            style="background:var(--surface2);border:1px solid ${p.hasManual ? 'var(--gold)' : 'var(--border)'};color:var(--text);padding:5px 8px;border-radius:6px;font-family:var(--mono);font-size:12px;width:96px;text-align:right">
+          <div style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-top:3px">${p.hasManual ? `orçado: ${fmt(p.autoFalta)}` : `${pct}% pago`}</div>
+        </div>
+      </div>`;
+    });
+    provHTML += `<div class="dre-row subtotal"><div class="dre-label">Total Fixos (selecionados)</div><div class="dre-val red">${fmt(totalProvFixo)}</div></div>`;
+  }
+  if (provisoesVar.length) {
+    provHTML += `<div class="bal-header">Variáveis Planejados Ainda Não Lançados</div>`;
+    provisoesVar.forEach(p => {
+      const pct = p.orcamento > 0 ? Math.round(p.gasto / p.orcamento * 100) : 0;
+      provHTML += `<div class="dre-row" style="align-items:flex-start;flex-wrap:wrap;gap:10px;${p.included ? '' : 'opacity:.4'}">
+        <div class="dre-label" style="display:flex;align-items:flex-start;gap:8px">
+          <input type="checkbox" class="prov-check" ${p.included ? 'checked' : ''}
+            onchange="toggleProvisionItem('variavel','${p.id}')"
+            style="margin-top:3px;flex-shrink:0;accent-color:${p.color};cursor:pointer" title="Incluir na provisão do BP Projetado">
+          <div style="flex:1;min-width:0">
+            <span style="display:inline-flex;align-items:center;gap:5px">
+              <span style="width:7px;height:7px;border-radius:50%;background:${p.color};flex-shrink:0"></span>
+              ${p.desc}
+            </span>
+            <div style="height:3px;background:var(--surface2);border-radius:9999px;margin-top:5px;width:100%;max-width:120px">
+              <div style="height:3px;border-radius:9999px;background:${p.color};width:${pct}%"></div>
+            </div>
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;white-space:nowrap">Ainda vou gastar</div>
+          <input type="number" class="prov-manual-input" step="0.01" min="0"
+            value="${p.falta.toFixed(2)}"
+            onchange="setProvisionManualValue('variavel','${p.id}', this.value)"
+            onkeydown="if(event.key==='Enter') this.blur()"
+            style="background:var(--surface2);border:1px solid ${p.hasManual ? 'var(--gold)' : 'var(--border)'};color:var(--text);padding:5px 8px;border-radius:6px;font-family:var(--mono);font-size:12px;width:96px;text-align:right">
+          <div style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-top:3px">${p.hasManual ? `orçado: ${fmt(p.autoFalta)}` : `${pct}% usado`}</div>
+        </div>
+      </div>`;
+    });
+    provHTML += `<div class="dre-row subtotal"><div class="dre-label">Total Variáveis (selecionados)</div><div class="dre-val gold">${fmt(totalProvVar)}</div></div>`;
+  }
+  if (!provHTML) {
+    provHTML = `<div class="empty-state">Tudo planejado já foi pago! 🎉</div>`;
+  } else {
+    provHTML += `<div class="dre-row total"><div class="dre-label">Total Provisões (BP Projetado)</div><div class="dre-val" style="color:var(--gold)">${fmt(totalProvisoes)}</div></div>`;
+  }
+  document.getElementById('balProvisionTable').innerHTML = provHTML;
+
+  renderChartBalance2({
+    caixaAtivo, caixaAtivoProj, investimentos, ativoAReceber,
+    dividasManual, descoberto, descobertoProj, passivoFuturo,
+    totalProvisoes, plAtual, plProjetado,
+    ativoAReceberFuturoMeses, passivoFuturoMeses, plProjetadoFuturo
+  });
+}
+
+// Liga/desliga se um item (fixo ou variável) entra na provisão do BP Projetado
+function toggleProvisionItem(kind, id) {
+  if (kind === 'fixo') {
+    const p = planned.fixo.find(x => x.id === id);
+    if (!p) return;
+    p.incluirProvisao = !(p.incluirProvisao !== false);
+    save(KEYS.planned, planned);
+  } else {
+    const c = categories.find(x => x.id === id);
+    if (!c) return;
+    c.incluirProvisao = !(c.incluirProvisao !== false);
+    save(KEYS.categories, categories);
+  }
+  renderBalanco();
+}
+
+// ═══════════════════ LANÇAR PLANEJADO ═══════════════════
+function openLaunchModal() {
+  const modal = document.getElementById('launchModal');
+  modal.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  buildLaunchModal();
+}
+
+function closeLaunchModal() {
+  document.getElementById('launchModal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function buildLaunchModal() {
+  const [y, m] = currentMonth.split('-').map(Number);
+  document.getElementById('launchModalSubtitle').textContent =
+    `Mês: ${ymToLabel(currentMonth)} — lança receitas, fixos e variáveis planejados como transações reais`;
+
+  const existing = txList();
+
+  // para fixos/receitas: duplicata = mesmo cat+tipo já existe no mês
+  function isDup(type, catId) {
+    return existing.some(t => t.type === type && t.cat === catId);
+  }
+
+  // para variáveis: não bloqueia (pode lançar o orçamento mesmo com gastos parciais)
+  // mas mostra quanto já foi gasto
+  function spentOnCat(catId) {
+    return existing.filter(t => t.type === 'variavel' && t.cat === catId)
+                   .reduce((a, t) => a + t.value, 0);
+  }
+
+  // ── helper para receitas e fixos (valor + dia fixos, checkbox simples, data editável)
+  function buildFixedList(containerId, items, type, color) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    const validItems = items.filter(i => i.value > 0);
+    if (!validItems.length) {
+      container.innerHTML = `<div style="padding:8px 10px;font-size:12px;color:var(--muted)">Nenhum item planejado.</div>`;
+      return;
+    }
+    validItems.forEach(item => {
+      const dup = isDup(type, item.id);
+      const dateStr = `${y}-${String(m).padStart(2,'0')}-${String(Math.min(item.day, new Date(y,m,0).getDate())).padStart(2,'0')}`;
+      const div = document.createElement('label');
+      div.className = 'launch-item' + (dup ? ' already' : '');
+      div.innerHTML = `
+        <input type="checkbox" class="launch-check"
+          data-type="${type}" data-cat="${item.id}"
+          data-value="${item.value}" data-desc="${item.desc}"
+          data-date="${dateStr}"
+          ${dup ? '' : 'checked'} ${dup ? 'disabled' : ''}>
+        <div class="launch-item-desc">${item.desc}${dup ? ' <span class="already-badge">já lançado</span>' : ''}</div>
+        <input type="date" class="launch-item-date" value="${dateStr}" ${dup ? 'disabled' : ''}
+          style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:4px 6px;border-radius:6px;font-family:var(--mono);font-size:11px;width:130px" onclick="event.stopPropagation()">
+        <div class="launch-item-val" style="color:${color}">${fmt(item.value)}</div>
+      `;
+      const chk = div.querySelector('.launch-check');
+      const dateInput = div.querySelector('.launch-item-date');
+      if (!dup) {
+        chk.addEventListener('change', updateLaunchTotals);
+        dateInput.addEventListener('click', (e) => e.stopPropagation());
+        dateInput.addEventListener('change', (e) => {
+          e.stopPropagation();
+          if (dateInput.value) chk.dataset.date = dateInput.value;
+        });
+      }
+      container.appendChild(div);
+    });
+  }
+
+  // ── helper para variáveis (valor e dia editáveis inline)
+  function buildVariaveisList() {
+    const container = document.getElementById('launchVariaveisList');
+    container.innerHTML = '';
+    const validCats = categories.filter(c => c.budget > 0);
+    if (!validCats.length) {
+      container.innerHTML = `<div style="padding:8px 10px;font-size:12px;color:var(--muted)">Nenhuma categoria com orçamento.</div>`;
+      return;
+    }
+    validCats.forEach(cat => {
+      const spent = spentOnCat(cat.id);
+      const remaining = Math.max(0, cat.budget - spent);
+      const hasPartial = spent > 0;
+
+      const div = document.createElement('div');
+      div.className = 'launch-item';
+      div.style.alignItems = 'flex-start';
+      div.style.gap = '8px';
+
+      div.innerHTML = `
+        <input type="checkbox" class="launch-check launch-check-var" style="margin-top:3px"
+          data-type="variavel" data-cat="${cat.id}"
+          data-desc="Orçamento ${cat.name}"
+          checked>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+            <span style="width:8px;height:8px;border-radius:50%;background:${cat.color};flex-shrink:0;display:inline-block"></span>
+            <span style="font-size:13px">${cat.name}</span>
+            ${hasPartial ? `<span class="already-badge" style="background:rgba(16,185,129,.12);color:var(--green)">R$ ${spent.toLocaleString('pt-BR',{minimumFractionDigits:2})} já gasto</span>` : ''}
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <div style="display:flex;flex-direction:column;gap:3px">
+              <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Valor (R$)</span>
+              <input type="number" class="launch-var-value" step="0.01" min="0.01"
+                value="${remaining.toFixed(2)}"
+                placeholder="${cat.budget.toFixed(2)}"
+                style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:6px;font-family:var(--mono);font-size:12px;width:110px">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px">
+              <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Dia do mês</span>
+              <input type="number" class="launch-var-day" min="1" max="${new Date(y,m,0).getDate()}"
+                value="1"
+                style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:6px;font-family:var(--mono);font-size:12px;width:70px">
+            </div>
+          </div>
+        </div>
+        <div style="font-family:var(--mono);font-size:12px;color:var(--muted);text-align:right;padding-top:3px;white-space:nowrap">
+          orç. ${fmt(cat.budget)}
+        </div>
+      `;
+
+      // sync checkbox data-value and data-date from editable inputs
+      const valInput = div.querySelector('.launch-var-value');
+      const dayInput = div.querySelector('.launch-var-day');
+      const chk      = div.querySelector('.launch-check-var');
+
+      function syncVarData() {
+        const v = parseFloat(valInput.value) || 0;
+        const d = parseInt(dayInput.value)   || 1;
+        const clampedDay = Math.min(Math.max(d, 1), new Date(y, m, 0).getDate());
+        chk.dataset.value = v;
+        chk.dataset.date  = `${y}-${String(m).padStart(2,'0')}-${String(clampedDay).padStart(2,'0')}`;
+        chk.dataset.desc  = `Orçamento ${cat.name}`;
+        updateLaunchTotals();
+      }
+      syncVarData();
+      valInput.addEventListener('input', syncVarData);
+      dayInput.addEventListener('input', syncVarData);
+      chk.addEventListener('change', updateLaunchTotals);
+
+      container.appendChild(div);
+    });
+  }
+
+  buildFixedList('launchReceitasList', planned.receita, 'receita', 'var(--green)');
+  buildFixedList('launchFixosList',    planned.fixo,    'fixo',    'var(--red)');
+  buildVariaveisList();
+
+  // data padrão: hoje se estiver dentro do mês selecionado, senão dia 1 do mês selecionado
+  const todayD = new Date();
+  const defaultDateStr = (todayD.getFullYear() === y && (todayD.getMonth()+1) === m)
+    ? `${y}-${String(m).padStart(2,'0')}-${String(todayD.getDate()).padStart(2,'0')}`
+    : `${y}-${String(m).padStart(2,'0')}-01`;
+  document.getElementById('launchDefaultDate').value = defaultDateStr;
+  document.getElementById('launchDefaultDate').min = `${y}-${String(m).padStart(2,'0')}-01`;
+  document.getElementById('launchDefaultDate').max = `${y}-${String(m).padStart(2,'0')}-${String(new Date(y,m,0).getDate()).padStart(2,'0')}`;
+
+  // warning duplicatas (só fixos/receitas)
+  const dupCount = [
+    ...planned.receita.filter(p => p.value > 0 && isDup('receita', p.id)),
+    ...planned.fixo.filter(p    => p.value > 0 && isDup('fixo',    p.id)),
+  ].length;
+  const warn = document.getElementById('launchDupWarning');
+  if (dupCount > 0) {
+    warn.style.display = 'block';
+    warn.textContent = `⚠ ${dupCount} item(ns) já lançado(s) este mês — desabilitados para evitar duplicata.`;
+  } else {
+    warn.style.display = 'none';
+  }
+
+  updateLaunchTotals();
+}
+
+// Aplica a "data padrão" escolhida a todos os itens marcados (e habilitados) do modal de lançamento.
+function applyLaunchDefaultDate() {
+  const dateStr = document.getElementById('launchDefaultDate').value;
+  if (!dateStr) { toast('Escolha uma data padrão primeiro.'); return; }
+  const day = parseInt(dateStr.split('-')[2], 10);
+
+  // itens de receita/fixo: atualiza o input de data e o dataset do checkbox
+  document.querySelectorAll('#launchReceitasList .launch-item-date:not([disabled]), #launchFixosList .launch-item-date:not([disabled])').forEach(input => {
+    input.value = dateStr;
+    const chk = input.closest('.launch-item').querySelector('.launch-check');
+    if (chk) chk.dataset.date = dateStr;
+  });
+
+  // itens variáveis: atualiza o "dia do mês" (mantém o ano/mês do item, já que o orçamento é mensal)
+  document.querySelectorAll('#launchVariaveisList .launch-var-day').forEach(input => {
+    const max = parseInt(input.max, 10) || 31;
+    input.value = Math.min(day, max);
+    input.dispatchEvent(new Event('input'));
+  });
+
+  toast('Data padrão aplicada aos itens selecionados.');
+  updateLaunchTotals();
+}
+
+function updateLaunchTotals() {
+  const checks = document.querySelectorAll('.launch-check:checked');
+  let rec = 0, desp = 0;
+  checks.forEach(c => {
+    const v = parseFloat(c.dataset.value);
+    if (c.dataset.type === 'receita') rec  += v;
+    else                              desp += v;
+  });
+  const liq = rec - desp;
+  document.getElementById('launchTotalRec').textContent  = fmt(rec);
+  document.getElementById('launchTotalDesp').textContent = fmt(desp);
+  const liqEl = document.getElementById('launchTotalLiq');
+  liqEl.textContent = fmt(liq);
+  liqEl.style.color = liq >= 0 ? 'var(--green)' : 'var(--red)';
+
+  const anyChecked = checks.length > 0;
+  document.getElementById('launchConfirmBtn').disabled = !anyChecked;
+  document.getElementById('launchConfirmBtn').style.opacity = anyChecked ? '1' : '.5';
+}
+
+function confirmLaunch() {
+  const checks = document.querySelectorAll('.launch-check:checked');
+  if (!checks.length) return;
+
+  const list = txList();
+  let count = 0;
+  checks.forEach(c => {
+    list.push({
+      id:    uid(),
+      date:  c.dataset.date,
+      desc:  c.dataset.desc,
+      value: parseFloat(c.dataset.value),
+      type:  c.dataset.type,
+      cat:   c.dataset.cat,
+    });
+    count++;
+  });
+  list.sort((a, b) => a.date.localeCompare(b.date));
+  txSave(list);
+  closeLaunchModal();
+  toast(`${count} transação(ões) lançada(s) com sucesso!`);
+  renderAll();
+}
+
+// fechar modal clicando fora
+document.getElementById('launchModal').addEventListener('click', function(e) {
+  if (e.target === this) closeLaunchModal();
+});
+
+// ═══════════════════ RESET TO SEED ═══════════════════
+function resetToSeed() {
+  if (!confirm('Isso vai substituir planejado, categorias e transações pelos dados do PDF. Continuar?')) return;
+  planned     = seedPlanned();
+  categories  = seedCategories();
+  const txNew = {};
+  txNew['2026-02'] = seedTransactions();
+  transactions = txNew;
+  meta = { initialBalance: { '2026-02': 0 }, totalWealth: 0, totalLiabilities: 0 };
+  currentMonth = '2026-02';
+  save(KEYS.planned,      planned);
+  save(KEYS.categories,   categories);
+  save(KEYS.transactions, transactions);
+  save(KEYS.meta,         meta);
+  save(KEYS.currentMonth, currentMonth);
+  toast('Dados do PDF restaurados!');
+  renderAll();
+}
+
+// ═══════════════════ RENDER ALL ═══════════════════
+function renderAll() {
+  buildMonthSelect();
+  loadMetaInputs();
+  renderMonthBar();
+  renderSummaryCards();
+  renderTxTable();
+  renderPlannedTables();
+  renderCategoriesTable();
+  updateTxCategory();
+  renderChartBalance();
+  renderChartCategories();
+  renderChartIncomeExpense();
+  renderChartVariable();
+  renderDRE();
+  renderBalanco();
+  renderCarObligations();
+  // default date to today
+  if (!document.getElementById('txDate').value) {
+    const t = new Date(); document.getElementById('txDate').value = t.toISOString().split('T')[0];
+  }
+}
+
+// ═══════════════════ NAVIGATION ═══════════════════
+function setPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  event.target.classList.add('active');
+
+  // Os gráficos Chart.js medem o tamanho do canvas no momento em que são criados.
+  // Se a aba ainda estava com display:none nesse momento, o canvas fica 0x0 e o
+  // gráfico aparece quebrado/distorcido. Por isso, sempre que uma aba se torna
+  // visível, os gráficos dela são recriados (agora com o tamanho real disponível).
+  requestAnimationFrame(() => {
+    if (page === 'dashboard') {
+      renderChartBalance();
+      renderChartCategories();
+      renderChartIncomeExpense();
+      renderChartVariable();
+    } else if (page === 'dre') {
+      renderChartDre();
+    } else if (page === 'balance') {
+      renderBalanco();
+    }
+  });
+}
+
+// ═══════════════════ EXPORT / IMPORT ═══════════════════
+function exportData() {
+  const data = { transactions, planned, categories, meta, carObligations };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `financas_${currentMonth}.json`;
+  a.click();
+  toast('Dados exportados!');
+}
+
+function importData(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (data.transactions)   transactions   = data.transactions;
+      if (data.planned)        planned        = data.planned;
+      if (data.categories)     categories     = data.categories;
+      if (data.meta)           meta           = data.meta;
+      if (data.carObligations) carObligations = data.carObligations;
+      save(KEYS.transactions, transactions);
+      save(KEYS.planned,      planned);
+      save(KEYS.categories,   categories);
+      save(KEYS.meta,         meta);
+      save(KEYS.carObligations, carObligations);
+      toast('Dados importados com sucesso!');
+      renderAll();
+      // push para o Drive imediatamente (sem esperar debounce)
+      if (_driveToken && _driveFileId) {
+        driveSetStatus('saving', 'Drive: sincronizando importação…');
+        driveUpload(_driveFileId, buildPayload())
+          .then(() => driveSetStatus('ok', '☁ Drive: salvo ✓'))
+          .catch(() => driveSetStatus('error', '☁ Drive: falha ao sincronizar'));
+      }
+    } catch { toast('Erro ao importar arquivo.'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// ═══════════════════ GOOGLE DRIVE SYNC ═══════════════════
+// NOTA: _driveToken, _driveFileId, _syncDebounce, _tokenClient
+// estão declarados junto ao bloco DRIVE (acima do save()) para evitar TDZ.
+
+// ── Status visual ──
+function driveSetStatus(state, text) {
+  const el  = document.getElementById('driveStatus');
+  const dot = document.getElementById('driveStatusDot');
+  const lbl = document.getElementById('driveStatusText');
+  if (!el) return;
+  el.className = state; // idle | ok | saving | error
+  lbl.textContent = text;
+  // mostra o dot pulsante só quando está salvando
+  dot.className = state === 'saving' ? 'dot-pulse' : '';
+  dot.style.display = state === 'idle' ? 'none' : 'inline-block';
+}
+
+// ── Clique no pill: conecta se desconectado, desconecta se conectado ──
+function driveStatusClick() {
+  if (_driveToken) {
+    if (!confirm('Desconectar o Google Drive? Os dados continuam salvos localmente.')) return;
+    _driveToken  = null;
+    _driveFileId = null;
+    localStorage.removeItem(DRIVE.FILE_KEY);
+    localStorage.removeItem(DRIVE.TOKEN_KEY);
+    driveSetStatus('idle', '☁ Drive: clique para conectar');
+    toast('Drive desconectado.');
+  } else {
+    driveLogin();
+  }
+}
+
+// ── Tenta restaurar token do localStorage (válido por 55 min) ──
+function driveRestoreToken() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(DRIVE.TOKEN_KEY));
+    if (cached && cached.token && Date.now() < cached.expiry - 60_000) {
+      _driveToken = cached.token;
+      return true;
+    }
+  } catch {}
+  return false;
+}
+
+// ── Login automático via GSI (funciona em HTTPS — GitHub Pages) ──
+// Se aberto em file://, exibe aviso claro para usar a URL do GitHub Pages.
+function driveLogin() {
+  const isHttps = location.protocol === 'https:' || location.hostname === 'localhost';
+
+  if (!isHttps) {
+    // Aberto como arquivo local — mostra aviso com link para a versão hospedada
+    let modal = document.getElementById('driveLoginModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'driveLoginModal';
+      modal.style.cssText = `position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.8);
+        backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px`;
+      modal.innerHTML = `
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;
+                    padding:28px;max-width:440px;width:100%;text-align:center">
+          <div style="font-size:32px;margin-bottom:12px">☁</div>
+          <h2 style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:10px">
+            Abra pelo GitHub Pages para sincronizar
+          </h2>
+          <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:20px">
+            O login com Google só funciona via HTTPS.<br>
+            Você está abrindo o arquivo diretamente (<code style="color:var(--gold)">file://</code>).<br>
+            Use a URL abaixo em qualquer dispositivo:
+          </p>
+          <a href="https://rafazaba.github.io/financas" target="_blank"
+            style="display:block;background:var(--surface2);border:1px solid var(--border);
+                   border-radius:8px;padding:12px;font-family:var(--mono);font-size:13px;
+                   color:var(--green);text-decoration:none;margin-bottom:20px;word-break:break-all">
+            https://rafazaba.github.io/financas
+          </a>
+          <button onclick="document.getElementById('driveLoginModal').remove()"
+            style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);
+                   border-radius:8px;padding:8px 20px;cursor:pointer;font-size:12px">
+            Fechar
+          </button>
+        </div>`;
+      document.body.appendChild(modal);
+    } else {
+      modal.style.display = 'flex';
+    }
+    return;
+  }
+
+  // HTTPS: usa GSI para login automático com popup
+  if (!window.google?.accounts?.oauth2) {
+    driveSetStatus('saving', '☁ Drive: carregando…');
+    setTimeout(driveLogin, 600);
+    return;
+  }
+  if (!_tokenClient) {
+    _tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: DRIVE.CLIENT_ID,
+      scope:     DRIVE.SCOPE,
+      callback:  async (resp) => {
+        if (resp.error) {
+          driveSetStatus('error', '☁ Drive: erro de login');
+          toast('Falha no login: ' + resp.error);
+          return;
+        }
+        _driveToken = resp.access_token;
+        const expiry = Date.now() + (resp.expires_in || 3600) * 1000;
+        localStorage.setItem(DRIVE.TOKEN_KEY, JSON.stringify({ token: _driveToken, expiry }));
+        driveSetStatus('saving', '☁ Drive: conectando…');
+        await driveLoadOrInit();
+      },
+    });
+  }
+  _tokenClient.requestAccessToken({ prompt: '' });
+}
+
+// ── Após login: busca arquivo existente ou cria novo ──
+async function driveLoadOrInit() {
+  driveSetStatus('saving', '☁ Drive: verificando…');
+  try {
+    // Tenta encontrar o arquivo pelo nome (caso o fileId em cache seja de outro dispositivo)
+    if (!_driveFileId) {
+      const found = await driveFindFile();
+      if (found) _driveFileId = found;
+    }
+
+    if (_driveFileId) {
+      // Arquivo existe: baixa e mescla com dados locais (Drive prevalece — é a "fonte da verdade")
+      const remote = await driveDownload(_driveFileId);
+      if (remote) {
+        applyRemoteData(remote);
+        driveSetStatus('ok', '☁ Drive: sincronizado ✓');
+        toast('Dados carregados do Drive!');
+        return;
+      }
+    }
+
+    // Arquivo não existe ainda: cria com os dados locais atuais
+    const id = await driveUpload(null, buildPayload());
+    if (id) {
+      _driveFileId = id;
+      localStorage.setItem(DRIVE.FILE_KEY, id);
+      driveSetStatus('ok', '☁ Drive: sincronizado ✓');
+      toast('Arquivo criado no Drive!');
+    }
+  } catch (err) {
+    console.error('Drive init error:', err);
+    driveSetStatus('error', '☁ Drive: erro — clique para tentar novamente');
+  }
+}
+
+// ── Busca o arquivo financas_sync.json no Drive ──
+async function driveFindFile() {
+  const q   = encodeURIComponent(`name='${DRIVE.FILE_NAME}' and trashed=false`);
+  const res = await driveApiFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)&spaces=drive`);
+  const data = await res.json();
+  return data.files?.[0]?.id || null;
+}
+
+// ── Baixa o conteúdo do arquivo do Drive ──
+async function driveDownload(fileId) {
+  const res = await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
+  if (!res.ok) return null;
+  try { return await res.json(); } catch { return null; }
+}
+
+// ── Cria (fileId=null) ou atualiza (fileId existente) o arquivo no Drive ──
+async function driveUpload(fileId, payload) {
+  const content  = JSON.stringify(payload, null, 2);
+  const boundary = 'fin4nc3s_boundary';
+  const body = [
+    `--${boundary}`,
+    'Content-Type: application/json; charset=UTF-8',
+    '',
+    JSON.stringify({ name: DRIVE.FILE_NAME, mimeType: 'application/json' }),
+    `--${boundary}`,
+    'Content-Type: application/json',
+    '',
+    content,
+    `--${boundary}--`,
+  ].join('\r\n');
+
+  const url    = fileId
+    ? `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`
+    : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+  const method = fileId ? 'PATCH' : 'POST';
+
+  const res = await driveApiFetch(url, {
+    method,
+    headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
+    body,
+  });
+  if (!res.ok) throw new Error(`Drive upload failed: ${res.status}`);
+  const data = await res.json();
+  return data.id;
+}
+
+// ── Wrapper de fetch que injeta o Authorization header e lida com token expirado ──
+async function driveApiFetch(url, opts = {}) {
+  if (!_driveToken) throw new Error('Sem token Drive');
+  const headers = { Authorization: `Bearer ${_driveToken}`, ...(opts.headers || {}) };
+  const res = await fetch(url, { ...opts, headers });
+  if (res.status === 401) {
+    // token expirou: limpa e pede novo login
+    _driveToken = null;
+    localStorage.removeItem(DRIVE.TOKEN_KEY);
+    driveSetStatus('error', 'Drive: sessão expirada — clique para reconectar');
+    throw new Error('Token expirado');
+  }
+  return res;
+}
+
+// ── Aplica dados remotos ao estado local (Drive como fonte da verdade) ──
+function applyRemoteData(data) {
+  if (data.transactions)   transactions   = data.transactions;
+  if (data.planned)        planned        = data.planned;
+  if (data.categories)     categories     = data.categories;
+  if (data.meta)           meta           = data.meta;
+  if (data.carObligations) carObligations = data.carObligations;
+  // persiste também no localStorage local
+  save(KEYS.transactions,   transactions);
+  save(KEYS.planned,        planned);
+  save(KEYS.categories,     categories);
+  save(KEYS.meta,           meta);
+  save(KEYS.carObligations, carObligations);
+  renderAll();
+}
+
+// ── Monta o payload completo para salvar ──
+function buildPayload() {
+  return { transactions, planned, categories, meta, carObligations, _savedAt: new Date().toISOString() };
+}
+
+// ── Auto-save com debounce de 2 s (chamado após qualquer alteração de dados) ──
+function driveSyncSchedule() {
+  if (!_driveToken || !_driveFileId) return;   // não conectado, silencioso
+  clearTimeout(_syncDebounce);
+  driveSetStatus('saving', '☁ Drive: salvando…');
+  _syncDebounce = setTimeout(async () => {
+    try {
+      await driveUpload(_driveFileId, buildPayload());
+      driveSetStatus('ok', '☁ Salvo ✓ ' + new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}));
+    } catch (err) {
+      console.error('Drive save error:', err);
+      driveSetStatus('error', '☁ Drive: falha — clique para tentar');
+    }
+  }, 2000);
+}
+
+// ── Inicialização: tenta restaurar sessão anterior automaticamente ──
+(function driveInit() {
+  const cached = (() => {
+    try { return JSON.parse(localStorage.getItem(DRIVE.TOKEN_KEY)); } catch { return null; }
+  })();
+  const tokenOk = cached && cached.token && Date.now() < cached.expiry - 60_000;
+  const isHttps = location.protocol === 'https:' || location.hostname === 'localhost';
+
+  if (tokenOk) {
+    _driveToken = cached.token;
+    driveSetStatus('saving', '☁ Drive: reconectando…');
+    setTimeout(driveLoadOrInit, 300);
+  } else if (_driveFileId && isHttps) {
+    // Token expirou mas estava conectado e estamos em HTTPS → tenta renovar silenciosamente
+    driveSetStatus('saving', '☁ Drive: renovando sessão…');
+    const tryRefresh = () => {
+      if (window.google?.accounts?.oauth2) {
+        if (!_tokenClient) {
+          _tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: DRIVE.CLIENT_ID,
+            scope:     DRIVE.SCOPE,
+            prompt:    '',
+            callback:  async (resp) => {
+              if (resp.error || !resp.access_token) {
+                driveSetStatus('error', '☁ Drive: sessão expirada — clique para reconectar');
+                return;
+              }
+              _driveToken = resp.access_token;
+              const expiry = Date.now() + (resp.expires_in || 3600) * 1000;
+              localStorage.setItem(DRIVE.TOKEN_KEY, JSON.stringify({ token: _driveToken, expiry }));
+              await driveLoadOrInit();
+            },
+          });
+        }
+        _tokenClient.requestAccessToken({ prompt: '' });
+      } else {
+        setTimeout(tryRefresh, 500);
+      }
+    };
+    setTimeout(tryRefresh, 800);
+  } else if (_driveFileId) {
+    driveSetStatus('error', '☁ Drive: sessão expirada — clique para reconectar');
+  } else {
+    driveSetStatus('idle', '☁ Drive: clique para conectar');
+  }
+})();
+
+// ═══════════════════ TOAST ═══════════════════
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ═══════════════════ INIT ═══════════════════
+renderAll();
+</script>
+
+
+</body></html>
