@@ -822,8 +822,13 @@
         <input type="number" id="initialBalance" step="0.01" placeholder="0,00" oninput="saveInitialBalance()">
       </div>
       <div class="form-group">
-        <label>Patrimônio total (bens, investimentos etc.)</label>
+        <label>Investimentos — valor inicial (mês mais antigo)</label>
         <input type="number" id="totalWealth" step="0.01" placeholder="0,00" oninput="saveInitialBalance()">
+        <div style="font-size:10px;color:var(--muted);margin-top:2px;line-height:1.4">
+          A partir daqui, o Balanço Patrimonial calcula "Investimentos" de cada mês automaticamente
+          como o patrimônio líquido acumulado do mês anterior. Este campo é só o ponto de partida,
+          usado no mês mais antigo com algum dado lançado.
+        </div>
       </div>
       <div class="form-group">
         <label>Total de dívidas / passivos</label>
@@ -1106,7 +1111,7 @@
     </div>
     <div>
       <div class="section-title">Detalhamento — Futuro e Provisões</div>
-      <div style="font-size:11px;color:var(--muted);margin:-6px 0 10px">Transações futuras já lançadas entram automaticamente no Passivo/Ativo extra-caixa. Para o que falta do orçamento, ajuste o campo "ainda vou gastar" com sua própria estimativa (por padrão vem com o valor que falta do orçamento) e marque o que deve entrar como provisão no BP Projetado.</div>
+      <div style="font-size:11px;color:var(--muted);margin:-6px 0 10px">Transações futuras já lançadas entram automaticamente no Passivo/Ativo extra-caixa. Para o que falta do orçamento, ajuste o campo "ainda vou gastar" com sua própria estimativa (por padrão vem com o valor que falta do orçamento) e marque o que deve entrar como provisão no BP Projetado. A marcação é independente em cada mês observado — por padrão, todos os itens entram em todos os meses.</div>
       <div class="table-wrap" id="balProvisionTable"></div>
     </div>
   </div>
@@ -1290,6 +1295,7 @@ const KEYS = {
   currentMonth: 'cf_currentMonth',
   carObligations: 'cf_carObligations',
   cdiCache:     'cf_cdiCache',
+  provisionToggles: 'cf_provisionToggles',
 };
 
 const DRIVE = {
@@ -1431,6 +1437,11 @@ carObligations = carObligations.map(o => {
 });
 save(KEYS.carObligations, carObligations); // garante persistência do seed/migração já na primeira carga
 // cdiRate removido — taxa agora é manual via meta.cdiManualPct
+
+// Inclusão de provisões (fixos/variáveis planejados) por mês — independente em cada mês,
+// por padrão todos incluídos (ver isProvisionIncluded). Formato:
+// { "2026-06": { fixo: { planejadoId: true|false }, variavel: { catId: true|false } } }
+let provisionToggles = load(KEYS.provisionToggles) || {};
 
 // Garante que as transações de jun/2026 (extratos enviados) estejam presentes,
 // sem duplicar caso a página já tenha sido carregada antes (ids fixos)
@@ -2002,12 +2013,13 @@ function renderChartBalance2(d) {
       datasets: [
         { label: 'Caixa / Conta',              data: [d.caixaAtivo, 0, d.caixaAtivoProj, 0, d.caixaAtivoProj, 0],               backgroundColor: '#10B981bb', borderRadius: 4 },
         { label: 'Investimentos / Bens',       data: [d.investimentos, 0, d.investimentos, 0, d.investimentos, 0],             backgroundColor: '#3B82F6bb', borderRadius: 4 },
+        { label: 'Reserva Carro',              data: [d.reservaCarro, 0, d.reservaCarro, 0, d.reservaCarro, 0],                backgroundColor: '#F59E0Bbb', borderRadius: 4 },
         { label: 'A Receber (futuro no mês)',  data: [d.ativoAReceber, 0, 0, 0, 0, 0],                                        backgroundColor: '#10B98166', borderRadius: 4 },
         { label: 'A Receber (próx. meses)',    data: [0, 0, 0, 0, d.ativoAReceberFuturoMeses, 0],                              backgroundColor: '#10B98133', borderRadius: 4 },
-        { label: 'Dívidas / Descoberto',       data: [0, d.dividasManual + d.descoberto, 0, d.dividasManual + d.descobertoProj, 0, d.dividasManual + d.descobertoProj], backgroundColor: '#EF4444bb', borderRadius: 4 },
+        { label: 'Dívidas / Descoberto',       data: [0, d.dividasManual + d.descoberto + d.reservaCarroDeficit, 0, d.dividasManual + d.descobertoProj + d.reservaCarroDeficit, 0, d.dividasManual + d.descobertoProj + d.reservaCarroDeficit], backgroundColor: '#EF4444bb', borderRadius: 4 },
         { label: 'A Pagar (futuro no mês)',    data: [0, d.passivoFuturo, 0, d.passivoFuturo, 0, d.passivoFuturo],            backgroundColor: '#EF444466', borderRadius: 4 },
         { label: 'A Pagar (próx. meses)',      data: [0, 0, 0, 0, 0, d.passivoFuturoMeses],                                   backgroundColor: '#EF444433', borderRadius: 4 },
-        { label: 'Provisões planejadas',       data: [0, 0, 0, d.totalProvisoes, 0, d.totalProvisoes],                        backgroundColor: '#F59E0Bbb', borderRadius: 4 },
+        { label: 'Provisões planejadas',       data: [0, 0, 0, d.totalProvisoes, 0, d.totalProvisoes],                        backgroundColor: '#F59E0B66', borderRadius: 4 },
         { label: 'Patrimônio Líquido',         data: [0, d.plAtual, 0, d.plProjetado, 0, d.plProjetadoFuturo],                backgroundColor: '#8B5CF6bb', borderRadius: 4 },
       ]
     },
@@ -2144,6 +2156,16 @@ function renderDRE() {
 // Calcula as provisões (fixos + variáveis ainda não lançados), respeitando tanto o
 // valor automático (orçado − já gasto) quanto um valor manual que o usuário pode
 // digitar para "quanto ainda penso que vou gastar até o fim do mês".
+// Verifica se um item (fixo ou variável) está marcado para entrar na provisão do BP Projetado
+// NO MÊS OBSERVADO. Cada mês tem seu próprio estado — por padrão, todos entram (true).
+function isProvisionIncluded(kind, id) {
+  const monthState = provisionToggles[currentMonth];
+  if (!monthState) return true;
+  const sub = kind === 'fixo' ? monthState.fixo : monthState.variavel;
+  if (!sub || !(id in sub)) return true; // padrão: incluído
+  return sub[id] !== false;
+}
+
 function computeProvisions() {
   const list = txList();
 
@@ -2152,7 +2174,7 @@ function computeProvisions() {
     const autoFalta  = Math.max(0, p.value - pago);
     const hasManual  = typeof p.provisaoManual === 'number';
     const falta      = hasManual ? p.provisaoManual : autoFalta;
-    const included   = p.incluirProvisao !== false; // padrão: incluído
+    const included   = isProvisionIncluded('fixo', p.id);
     return { id: p.id, desc: p.desc, planejado: p.value, pago, autoFalta, falta, hasManual, included };
   }).filter(x => x.autoFalta > 0 || x.hasManual);
 
@@ -2161,7 +2183,7 @@ function computeProvisions() {
     const autoFalta = Math.max(0, cat.budget - gasto);
     const hasManual = typeof cat.provisaoManual === 'number';
     const falta     = hasManual ? cat.provisaoManual : autoFalta;
-    const included  = cat.incluirProvisao !== false; // padrão: incluído
+    const included  = isProvisionIncluded('variavel', cat.id);
     return { id: cat.id, desc: cat.name, color: cat.color, orcamento: cat.budget, gasto, autoFalta, falta, hasManual, included };
   }).filter(x => x.autoFalta > 0 || x.hasManual);
 
@@ -2462,16 +2484,102 @@ function getFutureMonthsTotals(afterYM) {
   return { receita, fixo, variavel, despesa: fixo + variavel };
 }
 
+// ── INVESTIMENTOS = PATRIMÔNIO LÍQUIDO DO MÊS ANTERIOR (encadeado mês a mês) ──
+// Em vez de um valor manual fixo, "Investimentos / Bens" de cada mês passa a ser,
+// automaticamente, o patrimônio acumulado (caixa + investimentos) do mês anterior.
+// O valor manual (meta.totalWealth) serve só de ponto de partida, usado no mês mais
+// antigo com algum dado registrado — todos os meses seguintes encadeiam a partir dele.
+// A reserva do carro é deliberadamente EXCLUÍDA deste encadeamento (ela já é mostrada
+// e simulada separadamente, mês a mês — incluí-la aqui contaria a mesma reserva duas vezes).
+// Dívidas manuais (financiamentos) também ficam fora do encadeamento: são um saldo
+// estático mostrado no BP do mês observado, não uma variação mensal a acumular.
+function prevYM(ym) {
+  const { y, m } = indexToYM(ymToIndex(ym) - 1);
+  return `${y}-${String(m).padStart(2,'0')}`;
+}
+
+function earliestDataMonth() {
+  const keys = [...Object.keys(transactions), ...Object.keys(meta.initialBalance || {})];
+  if (!keys.length) return currentMonth;
+  return keys.sort()[0];
+}
+
+let _netWorthMemo = {};
+function getNetWorthExCarroForMonth(ym) {
+  if (_netWorthMemo[ym] !== undefined) return _netWorthMemo[ym];
+  const ib   = meta.initialBalance[ym] || 0;
+  const list = transactions[ym] || [];
+  const receitas  = list.filter(t => t.type === 'receita').reduce((a, t) => a + t.value, 0);
+  const fixos     = list.filter(t => t.type === 'fixo').reduce((a, t) => a + t.value, 0);
+  const variaveis = list.filter(t => t.type === 'variavel').reduce((a, t) => a + t.value, 0);
+  const caixa = ib + receitas - fixos - variaveis; // pode ser negativo (reduz o patrimônio)
+  const investimentos = getInvestimentosForMonth(ym);
+  const netWorth = caixa + investimentos;
+  _netWorthMemo[ym] = netWorth;
+  return netWorth;
+}
+
+function getInvestimentosForMonth(ym) {
+  const earliest = earliestDataMonth();
+  if (ym <= earliest) return meta.totalWealth || 0;
+  return getNetWorthExCarroForMonth(prevYM(ym));
+}
+
+// ── RESERVA DO FUNDO DO CARRO (saldo real, mês a mês, com juros) ──
+// Diferente do PMT (que é prospectivo), esta simulação calcula o saldo REAL do fundo até
+// o mês informado: deposita o que de fato foi lançado (categoria Carro/Seguro/IPVA), rende
+// a taxa de desconto (CDI) sobre o saldo, e desconta as parcelas que já venceram nesse meio
+// tempo — ficando coerente com os lançamentos passados de fato realizados.
+function getCarFundBalance(uptoYM) {
+  const rate = getCdiRate();
+  const i = rate.monthlyRate;
+
+  let allInstallments = [];
+  carObligations.forEach(o => { allInstallments = allInstallments.concat(expandInstallments(o)); });
+  const outflowsByMonth = {};
+  allInstallments.forEach(p => { outflowsByMonth[p.monthIndex] = (outflowsByMonth[p.monthIndex] || 0) + p.value; });
+
+  const depositsByMonth = {};
+  Object.keys(transactions).forEach(ym => {
+    const idx = ymToIndex(ym);
+    (transactions[ym] || []).forEach(t => {
+      if (t.type === 'fixo' && t.cat === SEED.fCarro) {
+        depositsByMonth[idx] = (depositsByMonth[idx] || 0) + t.value;
+      }
+    });
+  });
+
+  const allIdxs = [...Object.keys(depositsByMonth), ...Object.keys(outflowsByMonth)].map(Number);
+  if (!allIdxs.length) return 0;
+  const startIdx = Math.min(...allIdxs);
+  const uptoIdx  = ymToIndex(uptoYM);
+  if (uptoIdx < startIdx) return 0;
+
+  let balance = 0;
+  for (let idx = startIdx; idx <= uptoIdx; idx++) {
+    balance += depositsByMonth[idx] || 0;
+    balance += balance * i;
+    balance -= outflowsByMonth[idx] || 0;
+  }
+  return balance;
+}
+
 function renderBalanco() {
+  _netWorthMemo = {}; // invalida o cache do encadeamento a cada render (dados podem ter mudado)
   const today = new Date();
   const [cy, cm] = currentMonth.split('-').map(Number);
   document.getElementById('balDateLabel').textContent = today.toLocaleDateString('pt-BR');
   document.getElementById('balMonthLabel').textContent = ymToLabel(currentMonth);
 
   const c            = calcMonth();
-  const investimentos = meta.totalWealth      || 0;
+  const investimentos = getInvestimentosForMonth(currentMonth);
   const dividasManual = meta.totalLiabilities || 0;
   const list          = txList();
+
+  // ── RESERVA DO FUNDO DO CARRO (saldo real até o mês observado, já com juros) ──
+  const reservaCarroRaw     = getCarFundBalance(currentMonth);
+  const reservaCarro        = Math.max(0, reservaCarroRaw);
+  const reservaCarroDeficit = Math.max(0, -reservaCarroRaw);
 
   // ── BP ATUAL (D0) ────────────────────────────────────────────
   // Caixa só reflete o que JÁ aconteceu (transações com data <= hoje)
@@ -2485,8 +2593,8 @@ function renderBalanco() {
   const passivoFuturo = c.fixosFuturos + c.variaveisFuturas;
   const ativoAReceber  = c.receitasFuturas;
 
-  const ativoAtual   = caixaAtivo + investimentos + ativoAReceber;
-  const passivoAtual = descoberto + dividasManual + passivoFuturo;
+  const ativoAtual   = caixaAtivo + investimentos + reservaCarro + ativoAReceber;
+  const passivoAtual = descoberto + dividasManual + reservaCarroDeficit + passivoFuturo;
   const plAtual      = ativoAtual - passivoAtual;
 
   // ── PROVISÕES DE PLANEJAMENTO (o que falta do orçamento, ainda nem foi lançado) ──
@@ -2503,9 +2611,9 @@ function renderBalanco() {
   const caixaProjetado   = caixaAtual + ativoAReceber + receitasAReceberPlan;
   const caixaAtivoProj   = Math.max(0, caixaProjetado);
   const descobertoProj   = Math.max(0, -caixaProjetado);
-  const ativoProjetado   = caixaAtivoProj + investimentos;
+  const ativoProjetado   = caixaAtivoProj + investimentos + reservaCarro;
   // Passivo projetado = descoberto + dívidas + passivo futuro já lançado + provisões do que falta planejar
-  const passivoProjetado = descobertoProj + dividasManual + passivoFuturo + totalProvisoes;
+  const passivoProjetado = descobertoProj + dividasManual + reservaCarroDeficit + passivoFuturo + totalProvisoes;
   const plProjetado      = ativoProjetado - passivoProjetado;
 
   // ── BP PROJETADO + PRÓXIMOS MESES ─────────────────────────────
@@ -2537,6 +2645,10 @@ function renderBalanco() {
               <div class="dre-label">Não Circulante — Investimentos / Bens</div>
               <div class="dre-val blue">${fmt(investimentos)}</div>
             </div>
+            <div class="dre-row">
+              <div class="dre-label">Não Circulante — Reserva Carro (fundo IPVA/Seguro/Revisão)</div>
+              <div class="dre-val" style="color:var(--gold)">${fmt(reservaCarro)}</div>
+            </div>
             ${extraAtivo}
             <div class="dre-row subtotal" style="margin-top:auto">
               <div class="dre-label">Total do Ativo</div>
@@ -2549,8 +2661,9 @@ function renderBalanco() {
             <div class="bal-header">PASSIVO</div>
             ${desc > 0 ? `<div class="dre-row"><div class="dre-label">Descoberto bancário</div><div class="dre-val red">${fmt(desc)}</div></div>` : ''}
             ${dividasManual > 0 ? `<div class="dre-row"><div class="dre-label">Dívidas / Financiamentos</div><div class="dre-val red">${fmt(dividasManual)}</div></div>` : ''}
+            ${reservaCarroDeficit > 0 ? `<div class="dre-row"><div class="dre-label">Déficit do fundo do carro</div><div class="dre-val red">${fmt(reservaCarroDeficit)}</div></div>` : ''}
             ${extraPassivo}
-            ${(desc === 0 && dividasManual === 0 && !extraPassivo) ? `<div class="dre-row"><div class="dre-label" style="color:var(--muted)">Sem passivos</div><div class="dre-val">—</div></div>` : ''}
+            ${(desc === 0 && dividasManual === 0 && reservaCarroDeficit === 0 && !extraPassivo) ? `<div class="dre-row"><div class="dre-label" style="color:var(--muted)">Sem passivos</div><div class="dre-val">—</div></div>` : ''}
             <div class="dre-row subtotal">
               <div class="dre-label">Total do Passivo</div>
               <div class="dre-val red">${fmt(passivo)}</div>
@@ -2718,23 +2831,19 @@ function renderBalanco() {
     caixaAtivo, caixaAtivoProj, investimentos, ativoAReceber,
     dividasManual, descoberto, descobertoProj, passivoFuturo,
     totalProvisoes, plAtual, plProjetado,
-    ativoAReceberFuturoMeses, passivoFuturoMeses, plProjetadoFuturo
+    ativoAReceberFuturoMeses, passivoFuturoMeses, plProjetadoFuturo,
+    reservaCarro, reservaCarroDeficit
   });
 }
 
-// Liga/desliga se um item (fixo ou variável) entra na provisão do BP Projetado
+// Liga/desliga se um item (fixo ou variável) entra na provisão do BP Projetado —
+// o estado é independente em cada mês observado (por padrão, todos entram).
 function toggleProvisionItem(kind, id) {
-  if (kind === 'fixo') {
-    const p = planned.fixo.find(x => x.id === id);
-    if (!p) return;
-    p.incluirProvisao = !(p.incluirProvisao !== false);
-    save(KEYS.planned, planned);
-  } else {
-    const c = categories.find(x => x.id === id);
-    if (!c) return;
-    c.incluirProvisao = !(c.incluirProvisao !== false);
-    save(KEYS.categories, categories);
-  }
+  if (!provisionToggles[currentMonth]) provisionToggles[currentMonth] = { fixo: {}, variavel: {} };
+  const monthState = provisionToggles[currentMonth];
+  const sub = kind === 'fixo' ? (monthState.fixo || (monthState.fixo = {})) : (monthState.variavel || (monthState.variavel = {}));
+  sub[id] = !isProvisionIncluded(kind, id);
+  save(KEYS.provisionToggles, provisionToggles);
   renderBalanco();
 }
 
@@ -3054,7 +3163,7 @@ function setPage(page) {
 
 // ═══════════════════ EXPORT / IMPORT ═══════════════════
 function exportData() {
-  const data = { transactions, planned, categories, meta, carObligations };
+  const data = { transactions, planned, categories, meta, carObligations, provisionToggles };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -3074,11 +3183,13 @@ function importData(e) {
       if (data.categories)     categories     = data.categories;
       if (data.meta)           meta           = data.meta;
       if (data.carObligations) carObligations = data.carObligations;
+      if (data.provisionToggles) provisionToggles = data.provisionToggles;
       save(KEYS.transactions, transactions);
       save(KEYS.planned,      planned);
       save(KEYS.categories,   categories);
       save(KEYS.meta,         meta);
       save(KEYS.carObligations, carObligations);
+      save(KEYS.provisionToggles, provisionToggles);
       toast('Dados importados com sucesso!');
       renderAll();
       // push para o Drive imediatamente (sem esperar debounce)
@@ -3312,18 +3423,20 @@ function applyRemoteData(data) {
   if (data.categories)     categories     = data.categories;
   if (data.meta)           meta           = data.meta;
   if (data.carObligations) carObligations = data.carObligations;
+  if (data.provisionToggles) provisionToggles = data.provisionToggles;
   // persiste também no localStorage local
   save(KEYS.transactions,   transactions);
   save(KEYS.planned,        planned);
   save(KEYS.categories,     categories);
   save(KEYS.meta,           meta);
   save(KEYS.carObligations, carObligations);
+  save(KEYS.provisionToggles, provisionToggles);
   renderAll();
 }
 
 // ── Monta o payload completo para salvar ──
 function buildPayload() {
-  return { transactions, planned, categories, meta, carObligations, _savedAt: new Date().toISOString() };
+  return { transactions, planned, categories, meta, carObligations, provisionToggles, _savedAt: new Date().toISOString() };
 }
 
 // ── Auto-save com debounce de 2 s (chamado após qualquer alteração de dados) ──
