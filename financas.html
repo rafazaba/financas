@@ -1111,7 +1111,7 @@
     </div>
     <div>
       <div class="section-title">Detalhamento — Futuro e Provisões</div>
-      <div style="font-size:11px;color:var(--muted);margin:-6px 0 10px">Transações futuras já lançadas entram automaticamente no Passivo/Ativo extra-caixa. Para o que falta do orçamento, ajuste o campo "ainda vou gastar" com sua própria estimativa (por padrão vem com o valor que falta do orçamento) e marque o que deve entrar como provisão no BP Projetado. A marcação é independente em cada mês observado — por padrão, todos os itens entram em todos os meses.</div>
+      <div style="font-size:11px;color:var(--muted);margin:-6px 0 10px">Transações futuras já lançadas entram automaticamente no Passivo/Ativo extra-caixa. Para o que falta do orçamento (receitas a receber, fixos e variáveis ainda não lançados), ajuste o campo de estimativa (por padrão vem com o valor que falta do planejado) e marque o que deve entrar na projeção do BP Projetado. A marcação é independente em cada mês observado — por padrão, todos os itens entram em todos os meses.</div>
       <div class="table-wrap" id="balProvisionTable"></div>
     </div>
   </div>
@@ -2161,7 +2161,7 @@ function renderDRE() {
 function isProvisionIncludedForMonth(ym, kind, id) {
   const monthState = provisionToggles[ym];
   if (!monthState) return true;
-  const sub = kind === 'fixo' ? monthState.fixo : monthState.variavel;
+  const sub = monthState[kind];
   if (!sub || !(id in sub)) return true; // padrão: incluído
   return sub[id] !== false;
 }
@@ -2171,6 +2171,15 @@ function isProvisionIncluded(kind, id) {
 
 function computeProvisionsForMonth(ym) {
   const list = transactions[ym] || [];
+
+  const provisoesReceita = planned.receita.map(p => {
+    const recebido  = list.filter(t => t.type === 'receita' && t.cat === p.id).reduce((a, t) => a + t.value, 0);
+    const autoFalta  = Math.max(0, p.value - recebido);
+    const hasManual  = typeof p.provisaoManual === 'number';
+    const falta      = hasManual ? p.provisaoManual : autoFalta;
+    const included   = isProvisionIncludedForMonth(ym, 'receita', p.id);
+    return { id: p.id, desc: p.desc, planejado: p.value, recebido, autoFalta, falta, hasManual, included };
+  }).filter(x => x.autoFalta > 0 || x.hasManual);
 
   const provisoesFixo = planned.fixo.map(p => {
     const pago      = list.filter(t => t.type === 'fixo' && t.cat === p.id).reduce((a, t) => a + t.value, 0);
@@ -2190,11 +2199,12 @@ function computeProvisionsForMonth(ym) {
     return { id: cat.id, desc: cat.name, color: cat.color, orcamento: cat.budget, gasto, autoFalta, falta, hasManual, included };
   }).filter(x => x.autoFalta > 0 || x.hasManual);
 
-  const totalProvFixo  = provisoesFixo.filter(x => x.included).reduce((a, x) => a + x.falta, 0);
-  const totalProvVar   = provisoesVar.filter(x => x.included).reduce((a, x) => a + x.falta, 0);
-  const totalProvisoes = totalProvFixo + totalProvVar;
+  const totalProvReceita = provisoesReceita.filter(x => x.included).reduce((a, x) => a + x.falta, 0);
+  const totalProvFixo    = provisoesFixo.filter(x => x.included).reduce((a, x) => a + x.falta, 0);
+  const totalProvVar     = provisoesVar.filter(x => x.included).reduce((a, x) => a + x.falta, 0);
+  const totalProvisoes   = totalProvFixo + totalProvVar; // só despesas — receitas entram no caixa, não no passivo
 
-  return { provisoesFixo, provisoesVar, totalProvFixo, totalProvVar, totalProvisoes };
+  return { provisoesReceita, provisoesFixo, provisoesVar, totalProvReceita, totalProvFixo, totalProvVar, totalProvisoes };
 }
 function computeProvisions() {
   return computeProvisionsForMonth(currentMonth);
@@ -2203,7 +2213,12 @@ function computeProvisions() {
 // Atualiza (ou limpa, se o campo for esvaziado) o valor manual de provisão de um item.
 function setProvisionManualValue(kind, id, rawValue) {
   const v = rawValue === '' ? NaN : parseFloat(rawValue);
-  if (kind === 'fixo') {
+  if (kind === 'receita') {
+    const p = planned.receita.find(x => x.id === id);
+    if (!p) return;
+    if (isNaN(v)) delete p.provisaoManual; else p.provisaoManual = Math.max(0, v);
+    save(KEYS.planned, planned);
+  } else if (kind === 'fixo') {
     const p = planned.fixo.find(x => x.id === id);
     if (!p) return;
     if (isNaN(v)) delete p.provisaoManual; else p.provisaoManual = Math.max(0, v);
@@ -2522,10 +2537,10 @@ function getPLProjetadoForMonth(ym) {
   const variaveis = list.filter(t => t.type === 'variavel').reduce((a, t) => a + t.value, 0);
   const caixaFechado = ib + receitas - fixos - variaveis; // mês já encerrado: tudo já é "realizado"
 
-  // receitas planejadas que, naquele mês, ainda não tinham sido lançadas
-  const receitasPlanejadas   = planned.receita.reduce((a, p) => a + p.value, 0);
-  const receitasAReceberPlan = Math.max(0, receitasPlanejadas - receitas);
-  const caixaProjetado = caixaFechado + receitasAReceberPlan;
+  const prov = computeProvisionsForMonth(ym);
+
+  // receitas planejadas que, naquele mês, ainda não tinham sido lançadas — só as marcadas
+  const caixaProjetado = caixaFechado + prov.totalProvReceita;
   const caixaAtivoProj = Math.max(0, caixaProjetado);
   const descobertoProj = Math.max(0, -caixaProjetado);
 
@@ -2534,8 +2549,6 @@ function getPLProjetadoForMonth(ym) {
   const reservaCarro         = Math.max(0, reservaCarroRaw);
   const reservaCarroDeficit  = Math.max(0, -reservaCarroRaw);
   const dividasManual = meta.totalLiabilities || 0;
-
-  const prov = computeProvisionsForMonth(ym);
 
   const ativoProjetado   = caixaAtivoProj + investimentos + reservaCarro;
   const passivoProjetado = descobertoProj + dividasManual + reservaCarroDeficit + prov.totalProvisoes;
@@ -2624,17 +2637,12 @@ function renderBalanco() {
   const plAtual      = ativoAtual - passivoAtual;
 
   // ── PROVISÕES DE PLANEJAMENTO (o que falta do orçamento, ainda nem foi lançado) ──
-  // Receitas planejadas ainda a receber (considerando realizado + futuro já lançado)
-  const receitasContabilizadas = c.receitas + c.receitasFuturas;
-  const receitasPlanejadas     = planned.receita.reduce((a, p) => a + p.value, 0);
-  const receitasAReceberPlan   = Math.max(0, receitasPlanejadas - receitasContabilizadas);
-
   const prov = computeProvisions();
-  const { provisoesFixo, provisoesVar, totalProvFixo, totalProvVar, totalProvisoes } = prov;
+  const { provisoesReceita, provisoesFixo, provisoesVar, totalProvReceita, totalProvFixo, totalProvVar, totalProvisoes } = prov;
 
   // ── BP PROJETADO (fim do mês) ────────────────────────────────
-  // Caixa projetado = caixa atual + receitas futuras já lançadas + receitas planejadas que ainda nem foram lançadas
-  const caixaProjetado   = caixaAtual + ativoAReceber + receitasAReceberPlan;
+  // Caixa projetado = caixa atual + receitas futuras já lançadas + receitas planejadas marcadas para entrar
+  const caixaProjetado   = caixaAtual + ativoAReceber + totalProvReceita;
   const caixaAtivoProj   = Math.max(0, caixaProjetado);
   const descobertoProj   = Math.max(0, -caixaProjetado);
   const ativoProjetado   = caixaAtivoProj + investimentos + reservaCarro;
@@ -2785,6 +2793,36 @@ function renderBalanco() {
     </div>`;
   }
 
+  if (provisoesReceita.length) {
+    provHTML += `<div class="bal-header">Receitas Planejadas Ainda Não Lançadas</div>`;
+    provisoesReceita.forEach(p => {
+      const pct = p.planejado > 0 ? Math.round(p.recebido / p.planejado * 100) : 0;
+      provHTML += `<div class="dre-row" style="align-items:flex-start;flex-wrap:wrap;gap:10px;${p.included ? '' : 'opacity:.4'}">
+        <div class="dre-label" style="display:flex;align-items:flex-start;gap:8px">
+          <input type="checkbox" class="prov-check" ${p.included ? 'checked' : ''}
+            onchange="toggleProvisionItem('receita','${p.id}')"
+            style="margin-top:3px;flex-shrink:0;accent-color:var(--green);cursor:pointer" title="Incluir na projeção do BP Projetado">
+          <div style="flex:1;min-width:0">
+            ${p.desc}
+            <div style="height:3px;background:var(--surface2);border-radius:9999px;margin-top:5px;width:100%;max-width:120px">
+              <div style="height:3px;border-radius:9999px;background:var(--green);width:${pct}%"></div>
+            </div>
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;white-space:nowrap">Ainda vou receber</div>
+          <input type="number" class="prov-manual-input" step="0.01" min="0"
+            value="${p.falta.toFixed(2)}"
+            onchange="setProvisionManualValue('receita','${p.id}', this.value)"
+            onkeydown="if(event.key==='Enter') this.blur()"
+            style="background:var(--surface2);border:1px solid ${p.hasManual ? 'var(--gold)' : 'var(--border)'};color:var(--text);padding:5px 8px;border-radius:6px;font-family:var(--mono);font-size:12px;width:96px;text-align:right">
+          <div style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-top:3px">${p.hasManual ? `orçado: ${fmt(p.autoFalta)}` : `${pct}% recebido`}</div>
+        </div>
+      </div>`;
+    });
+    provHTML += `<div class="dre-row subtotal"><div class="dre-label">Total Receitas (selecionadas)</div><div class="dre-val" style="color:var(--green)">${fmt(totalProvReceita)}</div></div>`;
+  }
+
   if (provisoesFixo.length) {
     provHTML += `<div class="bal-header">Fixos Planejados Ainda Não Lançados</div>`;
     provisoesFixo.forEach(p => {
@@ -2862,12 +2900,12 @@ function renderBalanco() {
   });
 }
 
-// Liga/desliga se um item (fixo ou variável) entra na provisão do BP Projetado —
+// Liga/desliga se um item (receita, fixo ou variável) entra na provisão do BP Projetado —
 // o estado é independente em cada mês observado (por padrão, todos entram).
 function toggleProvisionItem(kind, id) {
-  if (!provisionToggles[currentMonth]) provisionToggles[currentMonth] = { fixo: {}, variavel: {} };
+  if (!provisionToggles[currentMonth]) provisionToggles[currentMonth] = { receita: {}, fixo: {}, variavel: {} };
   const monthState = provisionToggles[currentMonth];
-  const sub = kind === 'fixo' ? (monthState.fixo || (monthState.fixo = {})) : (monthState.variavel || (monthState.variavel = {}));
+  const sub = monthState[kind] || (monthState[kind] = {});
   sub[id] = !isProvisionIncluded(kind, id);
   save(KEYS.provisionToggles, provisionToggles);
   renderBalanco();
