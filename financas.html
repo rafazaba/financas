@@ -2157,24 +2157,27 @@ function renderDRE() {
 // valor automático (orçado − já gasto) quanto um valor manual que o usuário pode
 // digitar para "quanto ainda penso que vou gastar até o fim do mês".
 // Verifica se um item (fixo ou variável) está marcado para entrar na provisão do BP Projetado
-// NO MÊS OBSERVADO. Cada mês tem seu próprio estado — por padrão, todos entram (true).
-function isProvisionIncluded(kind, id) {
-  const monthState = provisionToggles[currentMonth];
+// EM UM MÊS ESPECÍFICO. Cada mês tem seu próprio estado — por padrão, todos entram (true).
+function isProvisionIncludedForMonth(ym, kind, id) {
+  const monthState = provisionToggles[ym];
   if (!monthState) return true;
   const sub = kind === 'fixo' ? monthState.fixo : monthState.variavel;
   if (!sub || !(id in sub)) return true; // padrão: incluído
   return sub[id] !== false;
 }
+function isProvisionIncluded(kind, id) {
+  return isProvisionIncludedForMonth(currentMonth, kind, id);
+}
 
-function computeProvisions() {
-  const list = txList();
+function computeProvisionsForMonth(ym) {
+  const list = transactions[ym] || [];
 
   const provisoesFixo = planned.fixo.map(p => {
     const pago      = list.filter(t => t.type === 'fixo' && t.cat === p.id).reduce((a, t) => a + t.value, 0);
     const autoFalta  = Math.max(0, p.value - pago);
     const hasManual  = typeof p.provisaoManual === 'number';
     const falta      = hasManual ? p.provisaoManual : autoFalta;
-    const included   = isProvisionIncluded('fixo', p.id);
+    const included   = isProvisionIncludedForMonth(ym, 'fixo', p.id);
     return { id: p.id, desc: p.desc, planejado: p.value, pago, autoFalta, falta, hasManual, included };
   }).filter(x => x.autoFalta > 0 || x.hasManual);
 
@@ -2183,7 +2186,7 @@ function computeProvisions() {
     const autoFalta = Math.max(0, cat.budget - gasto);
     const hasManual = typeof cat.provisaoManual === 'number';
     const falta     = hasManual ? cat.provisaoManual : autoFalta;
-    const included  = isProvisionIncluded('variavel', cat.id);
+    const included  = isProvisionIncludedForMonth(ym, 'variavel', cat.id);
     return { id: cat.id, desc: cat.name, color: cat.color, orcamento: cat.budget, gasto, autoFalta, falta, hasManual, included };
   }).filter(x => x.autoFalta > 0 || x.hasManual);
 
@@ -2192,6 +2195,9 @@ function computeProvisions() {
   const totalProvisoes = totalProvFixo + totalProvVar;
 
   return { provisoesFixo, provisoesVar, totalProvFixo, totalProvVar, totalProvisoes };
+}
+function computeProvisions() {
+  return computeProvisionsForMonth(currentMonth);
 }
 
 // Atualiza (ou limpa, se o campo for esvaziado) o valor manual de provisão de um item.
@@ -2484,15 +2490,14 @@ function getFutureMonthsTotals(afterYM) {
   return { receita, fixo, variavel, despesa: fixo + variavel };
 }
 
-// ── INVESTIMENTOS = PATRIMÔNIO LÍQUIDO DO MÊS ANTERIOR (encadeado mês a mês) ──
+// ── INVESTIMENTOS = PL PROJETADO DO MÊS ANTERIOR (encadeado mês a mês) ──
 // Em vez de um valor manual fixo, "Investimentos / Bens" de cada mês passa a ser,
-// automaticamente, o patrimônio acumulado (caixa + investimentos) do mês anterior.
-// O valor manual (meta.totalWealth) serve só de ponto de partida, usado no mês mais
-// antigo com algum dado registrado — todos os meses seguintes encadeiam a partir dele.
-// A reserva do carro é deliberadamente EXCLUÍDA deste encadeamento (ela já é mostrada
-// e simulada separadamente, mês a mês — incluí-la aqui contaria a mesma reserva duas vezes).
-// Dívidas manuais (financiamentos) também ficam fora do encadeamento: são um saldo
-// estático mostrado no BP do mês observado, não uma variação mensal a acumular.
+// automaticamente, o Patrimônio Líquido PROJETADO (ativo − passivo, incluindo dívidas,
+// descoberto e provisões do que faltava do orçamento) do mês anterior. O valor manual
+// (meta.totalWealth) serve só de ponto de partida, usado no mês mais antigo com algum
+// dado registrado — todos os meses seguintes encadeiam a partir dele.
+// A reserva do carro entra no ativo de cada PL mensal (ela já é simulada mês a mês,
+// então naturalmente já está refletida ano a ano dentro do PL encadeado).
 function prevYM(ym) {
   const { y, m } = indexToYM(ymToIndex(ym) - 1);
   return `${y}-${String(m).padStart(2,'0')}`;
@@ -2504,25 +2509,46 @@ function earliestDataMonth() {
   return keys.sort()[0];
 }
 
-let _netWorthMemo = {};
-function getNetWorthExCarroForMonth(ym) {
-  if (_netWorthMemo[ym] !== undefined) return _netWorthMemo[ym];
+// PL Projetado de um mês já encerrado — mesma fórmula do BP Projetado exibido na tela,
+// mas calculada para qualquer mês (não só o mês observado), para permitir o encadeamento.
+let _plProjMemo = {};
+function getPLProjetadoForMonth(ym) {
+  if (_plProjMemo[ym] !== undefined) return _plProjMemo[ym];
+
   const ib   = meta.initialBalance[ym] || 0;
   const list = transactions[ym] || [];
   const receitas  = list.filter(t => t.type === 'receita').reduce((a, t) => a + t.value, 0);
   const fixos     = list.filter(t => t.type === 'fixo').reduce((a, t) => a + t.value, 0);
   const variaveis = list.filter(t => t.type === 'variavel').reduce((a, t) => a + t.value, 0);
-  const caixa = ib + receitas - fixos - variaveis; // pode ser negativo (reduz o patrimônio)
-  const investimentos = getInvestimentosForMonth(ym);
-  const netWorth = caixa + investimentos;
-  _netWorthMemo[ym] = netWorth;
-  return netWorth;
+  const caixaFechado = ib + receitas - fixos - variaveis; // mês já encerrado: tudo já é "realizado"
+
+  // receitas planejadas que, naquele mês, ainda não tinham sido lançadas
+  const receitasPlanejadas   = planned.receita.reduce((a, p) => a + p.value, 0);
+  const receitasAReceberPlan = Math.max(0, receitasPlanejadas - receitas);
+  const caixaProjetado = caixaFechado + receitasAReceberPlan;
+  const caixaAtivoProj = Math.max(0, caixaProjetado);
+  const descobertoProj = Math.max(0, -caixaProjetado);
+
+  const investimentos = getInvestimentosForMonth(ym); // encadeamento recursivo
+  const reservaCarroRaw      = getCarFundBalance(ym);
+  const reservaCarro         = Math.max(0, reservaCarroRaw);
+  const reservaCarroDeficit  = Math.max(0, -reservaCarroRaw);
+  const dividasManual = meta.totalLiabilities || 0;
+
+  const prov = computeProvisionsForMonth(ym);
+
+  const ativoProjetado   = caixaAtivoProj + investimentos + reservaCarro;
+  const passivoProjetado = descobertoProj + dividasManual + reservaCarroDeficit + prov.totalProvisoes;
+  const plProjetado = ativoProjetado - passivoProjetado;
+
+  _plProjMemo[ym] = plProjetado;
+  return plProjetado;
 }
 
 function getInvestimentosForMonth(ym) {
   const earliest = earliestDataMonth();
   if (ym <= earliest) return meta.totalWealth || 0;
-  return getNetWorthExCarroForMonth(prevYM(ym));
+  return getPLProjetadoForMonth(prevYM(ym));
 }
 
 // ── RESERVA DO FUNDO DO CARRO (saldo real, mês a mês, com juros) ──
@@ -2565,7 +2591,7 @@ function getCarFundBalance(uptoYM) {
 }
 
 function renderBalanco() {
-  _netWorthMemo = {}; // invalida o cache do encadeamento a cada render (dados podem ter mudado)
+  _plProjMemo = {}; // invalida o cache do encadeamento a cada render (dados podem ter mudado)
   const today = new Date();
   const [cy, cm] = currentMonth.split('-').map(Number);
   document.getElementById('balDateLabel').textContent = today.toLocaleDateString('pt-BR');
