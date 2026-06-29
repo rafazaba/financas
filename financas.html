@@ -1304,6 +1304,7 @@ const DRIVE = {
   FILE_NAME:  'financas_sync.json',
   FILE_KEY:   'cf_driveFileId',
   TOKEN_KEY:  'cf_driveToken',
+  LOCAL_CHANGE_KEY: 'cf_lastLocalChange', // timestamp (ms) da última alteração local ainda não confirmada no Drive
 };
 
 // Variáveis de estado do Drive — declaradas aqui (antes de qualquer save()) para evitar TDZ
@@ -1320,7 +1321,13 @@ function load(k) {
 const _SYNC_SKIP_KEYS = new Set([KEYS.currentMonth, DRIVE.TOKEN_KEY, DRIVE.FILE_KEY, KEYS.cdiCache]);
 function save(k, v) {
   localStorage.setItem(k, JSON.stringify(v));
-  if (!_SYNC_SKIP_KEYS.has(k) && typeof driveSyncSchedule === 'function') driveSyncSchedule();
+  if (!_SYNC_SKIP_KEYS.has(k)) {
+    // marca "tenho uma alteração local que ainda pode não estar no Drive" — usado para
+    // não deixar uma versão antiga do Drive sobrescrever uma mudança local mais recente
+    // (ex: marcar/desmarcar uma provisão e atualizar a página logo em seguida).
+    localStorage.setItem(DRIVE.LOCAL_CHANGE_KEY, String(Date.now()));
+    if (typeof driveSyncSchedule === 'function') driveSyncSchedule();
+  }
 }
 
 // ═══════════════════ STATE ═══════════════════
@@ -2909,6 +2916,8 @@ function toggleProvisionItem(kind, id) {
   sub[id] = !isProvisionIncluded(kind, id);
   save(KEYS.provisionToggles, provisionToggles);
   renderBalanco();
+  // ação pontual (clique), não digitação contínua — sincroniza com o Drive já, sem esperar o debounce
+  driveSyncNow();
 }
 
 // ═══════════════════ LANÇAR PLANEJADO ═══════════════════
@@ -3395,9 +3404,21 @@ async function driveLoadOrInit() {
     }
 
     if (_driveFileId) {
-      // Arquivo existe: baixa e mescla com dados locais (Drive prevalece — é a "fonte da verdade")
+      // Arquivo existe: baixa os dados remotos
       const remote = await driveDownload(_driveFileId);
       if (remote) {
+        // Se há uma alteração local feita DEPOIS do último save remoto (ex: marcou/desmarcou
+        // uma provisão e atualizou a página antes do envio de 2s terminar), o Drive não pode
+        // sobrescrever essa mudança — em vez disso, envia o estado local (mais novo) pro Drive.
+        const localChangeAt = parseInt(localStorage.getItem(DRIVE.LOCAL_CHANGE_KEY) || '0', 10);
+        const remoteSavedAt = remote._savedAt ? new Date(remote._savedAt).getTime() : 0;
+        if (localChangeAt > remoteSavedAt) {
+          await driveUpload(_driveFileId, buildPayload());
+          localStorage.removeItem(DRIVE.LOCAL_CHANGE_KEY);
+          driveSetStatus('ok', '☁ Drive: sincronizado ✓');
+          toast('Alteração local enviada ao Drive!');
+          return;
+        }
         applyRemoteData(remote);
         driveSetStatus('ok', '☁ Drive: sincronizado ✓');
         toast('Dados carregados do Drive!');
@@ -3410,6 +3431,7 @@ async function driveLoadOrInit() {
     if (id) {
       _driveFileId = id;
       localStorage.setItem(DRIVE.FILE_KEY, id);
+      localStorage.removeItem(DRIVE.LOCAL_CHANGE_KEY);
       driveSetStatus('ok', '☁ Drive: sincronizado ✓');
       toast('Arquivo criado no Drive!');
     }
@@ -3480,7 +3502,8 @@ async function driveApiFetch(url, opts = {}) {
   return res;
 }
 
-// ── Aplica dados remotos ao estado local (Drive como fonte da verdade) ──
+// ── Aplica dados remotos ao estado local (Drive como fonte da verdade — só quando
+//    não há alteração local mais recente ainda não enviada, ver driveLoadOrInit) ──
 function applyRemoteData(data) {
   if (data.transactions)   transactions   = data.transactions;
   if (data.planned)        planned        = data.planned;
@@ -3488,13 +3511,15 @@ function applyRemoteData(data) {
   if (data.meta)           meta           = data.meta;
   if (data.carObligations) carObligations = data.carObligations;
   if (data.provisionToggles) provisionToggles = data.provisionToggles;
-  // persiste também no localStorage local
-  save(KEYS.transactions,   transactions);
-  save(KEYS.planned,        planned);
-  save(KEYS.categories,     categories);
-  save(KEYS.meta,           meta);
-  save(KEYS.carObligations, carObligations);
-  save(KEYS.provisionToggles, provisionToggles);
+  // persiste no localStorage local SEM marcar como "alteração local pendente"
+  // (escrita direta, não usa save(), já que isso é só replicar o que o Drive já tem)
+  localStorage.setItem(KEYS.transactions,   JSON.stringify(transactions));
+  localStorage.setItem(KEYS.planned,        JSON.stringify(planned));
+  localStorage.setItem(KEYS.categories,     JSON.stringify(categories));
+  localStorage.setItem(KEYS.meta,           JSON.stringify(meta));
+  localStorage.setItem(KEYS.carObligations, JSON.stringify(carObligations));
+  localStorage.setItem(KEYS.provisionToggles, JSON.stringify(provisionToggles));
+  localStorage.removeItem(DRIVE.LOCAL_CHANGE_KEY); // local agora reflete o Drive — nada pendente
   renderAll();
 }
 
@@ -3503,20 +3528,29 @@ function buildPayload() {
   return { transactions, planned, categories, meta, carObligations, provisionToggles, _savedAt: new Date().toISOString() };
 }
 
-// ── Auto-save com debounce de 2 s (chamado após qualquer alteração de dados) ──
+// ── Auto-save com debounce de 2 s (chamado após qualquer alteração de dados que pode
+//    vir em sequência rápida, como digitar em um campo) ──
 function driveSyncSchedule() {
   if (!_driveToken || !_driveFileId) return;   // não conectado, silencioso
   clearTimeout(_syncDebounce);
   driveSetStatus('saving', '☁ Drive: salvando…');
-  _syncDebounce = setTimeout(async () => {
-    try {
-      await driveUpload(_driveFileId, buildPayload());
-      driveSetStatus('ok', '☁ Salvo ✓ ' + new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}));
-    } catch (err) {
-      console.error('Drive save error:', err);
-      driveSetStatus('error', '☁ Drive: falha — clique para tentar');
-    }
-  }, 2000);
+  _syncDebounce = setTimeout(driveSyncNow, 2000);
+}
+
+// ── Envia para o Drive AGORA, sem esperar o debounce — usado em ações pontuais
+//    (ex: marcar/desmarcar uma provisão), onde não tem sentido esperar 2s. ──
+async function driveSyncNow() {
+  if (!_driveToken || !_driveFileId) return;
+  clearTimeout(_syncDebounce);
+  driveSetStatus('saving', '☁ Drive: salvando…');
+  try {
+    await driveUpload(_driveFileId, buildPayload());
+    localStorage.removeItem(DRIVE.LOCAL_CHANGE_KEY); // confirmado no Drive — nada mais pendente
+    driveSetStatus('ok', '☁ Salvo ✓ ' + new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}));
+  } catch (err) {
+    console.error('Drive save error:', err);
+    driveSetStatus('error', '☁ Drive: falha — clique para tentar');
+  }
 }
 
 // ── Inicialização: tenta restaurar sessão anterior automaticamente ──
