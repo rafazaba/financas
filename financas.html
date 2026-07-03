@@ -1970,17 +1970,84 @@ function renderChartVariable() {
     return { name: c.name, spent, budget: c.budget, color: c.color };
   }).filter(x=>x.budget>0||x.spent>0);
   if (!data.length) return;
+
+  // % do mês atual que já correu: se o mês observado é o corrente, usa o dia de hoje;
+  // se é passado, pro-rata = 1 (mês fechado); se é futuro, pro-rata = 0.
+  const today = new Date();
+  const [cy, cm] = currentMonth.split('-').map(Number);
+  const todayYM = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+  let prorata = 0;
+  if (currentMonth < todayYM) {
+    prorata = 1;
+  } else if (currentMonth === todayYM) {
+    const dim = daysInMonth(currentMonth);
+    prorata = today.getDate() / dim;
+  }
+  const paceValues = data.map(x => parseFloat((x.budget * prorata).toFixed(2)));
+  const paceLabel  = currentMonth === todayYM
+    ? `Limite até hoje (${Math.round(prorata*100)}% do mês)`
+    : currentMonth < todayYM ? 'Limite (mês encerrado)' : '—';
+
   const ctx = document.getElementById('chartVariable').getContext('2d');
   charts['variable'] = new Chart(ctx, {
     type: 'bar',
     data: {
       labels: data.map(x=>x.name),
       datasets: [
-        { label:'Gasto', data: data.map(x=>x.spent), backgroundColor: data.map(x=>x.color+'bb'), borderRadius:5 },
-        { label:'Orçamento', data: data.map(x=>x.budget), backgroundColor: data.map(x=>x.color+'33'), borderRadius:5, borderWidth:1, borderColor: data.map(x=>x.color) }
+        {
+          label: 'Gasto',
+          data: data.map(x=>x.spent),
+          backgroundColor: data.map(x=>x.color+'bb'),
+          borderRadius: 5,
+          order: 1,
+        },
+        {
+          // Linha de ritmo pro-rata: quanto você poderia ter gasto até hoje dado o % do mês.
+          // Renderizada como barras minúsculas (tipo "marcador") em cima do gráfico horizontal.
+          label: paceLabel,
+          data: paceValues,
+          backgroundColor: 'transparent',
+          borderColor: data.map(x => x.color),
+          borderWidth: 2,
+          borderDash: [4, 3],
+          borderRadius: 0,
+          borderSkipped: false,
+          type: 'bar',
+          order: 2,
+        },
+        {
+          label: 'Orçamento',
+          data: data.map(x=>x.budget),
+          backgroundColor: data.map(x=>x.color+'22'),
+          borderColor: data.map(x=>x.color+'66'),
+          borderWidth: 1,
+          borderRadius: 5,
+          order: 3,
+        },
       ]
     },
-    options: { ...chartOptions('R$'), indexAxis:'y' }
+    options: {
+      ...chartOptions('R$'),
+      indexAxis: 'y',
+      plugins: {
+        ...chartOptions('R$').plugins,
+        tooltip: {
+          callbacks: {
+            afterBody(items) {
+              // mostra a diferença entre o gasto e o limite pro-rata na tooltip
+              const idx = items[0]?.dataIndex;
+              if (idx === undefined || prorata === 0) return [];
+              const spent = data[idx].spent;
+              const pace  = paceValues[idx];
+              const diff  = spent - pace;
+              if (diff > 0) return [`⚠ R$ ${diff.toFixed(2)} acima do ritmo`];
+              if (diff < 0) return [`✓ R$ ${Math.abs(diff).toFixed(2)} abaixo do ritmo`];
+              return ['= No ritmo'];
+            }
+          }
+        }
+      }
+    }
   });
 }
 
@@ -2161,9 +2228,8 @@ function renderDRE() {
 }
 
 // Calcula as provisões (fixos + variáveis ainda não lançados), respeitando tanto o
-// valor automático (orçado − já gasto) quanto um valor manual que o usuário pode
-// digitar para "quanto ainda penso que vou gastar até o fim do mês".
-// Verifica se um item (fixo ou variável) está marcado para entrar na provisão do BP Projetado
+// valor automático (orçado − já gasto) quanto um valor manual por mês.
+// Verifica se um item está marcado para entrar na provisão do BP Projetado
 // EM UM MÊS ESPECÍFICO. Cada mês tem seu próprio estado — por padrão, todos entram (true).
 function isProvisionIncludedForMonth(ym, kind, id) {
   const monthState = provisionToggles[ym];
@@ -2176,32 +2242,46 @@ function isProvisionIncluded(kind, id) {
   return isProvisionIncludedForMonth(currentMonth, kind, id);
 }
 
+// Lê o valor manual de provisão do mês (independente por mês).
+// Retrocompatibilidade: se havia um valor global antigo (p.provisaoManual) e não há
+// valor por mês ainda, retorna o global na primeira vez e ignora daí em diante.
+function getProvisionManual(ym, kind, id) {
+  const s = provisionToggles[ym];
+  if (s && s.manual && s.manual[kind] && id in s.manual[kind]) {
+    return s.manual[kind][id]; // undefined = apagado explicitamente neste mês → usa auto
+  }
+  return undefined; // não tem override neste mês → usa auto
+}
+
 function computeProvisionsForMonth(ym) {
   const list = transactions[ym] || [];
 
-  const provisoesReceita = planned.receita.map(p => {
-    const recebido  = list.filter(t => t.type === 'receita' && t.cat === p.id).reduce((a, t) => a + t.value, 0);
-    const autoFalta  = Math.max(0, p.value - recebido);
-    const hasManual  = typeof p.provisaoManual === 'number';
-    const falta      = hasManual ? p.provisaoManual : autoFalta;
-    const included   = isProvisionIncludedForMonth(ym, 'receita', p.id);
+  const provisoesReceita = (planned.receita || []).map(p => {
+    const recebido  = list.filter(t => t.type === 'receita').reduce((a, t) => a + t.value, 0);
+    const autoFalta = Math.max(0, p.value - recebido);
+    const manualVal = getProvisionManual(ym, 'receita', p.id);
+    const hasManual = manualVal !== undefined;
+    const falta     = hasManual ? manualVal : autoFalta;
+    const included  = isProvisionIncludedForMonth(ym, 'receita', p.id);
     return { id: p.id, desc: p.desc, planejado: p.value, recebido, autoFalta, falta, hasManual, included };
   }).filter(x => x.autoFalta > 0 || x.hasManual);
 
   const provisoesFixo = planned.fixo.map(p => {
     const pago      = list.filter(t => t.type === 'fixo' && t.cat === p.id).reduce((a, t) => a + t.value, 0);
-    const autoFalta  = Math.max(0, p.value - pago);
-    const hasManual  = typeof p.provisaoManual === 'number';
-    const falta      = hasManual ? p.provisaoManual : autoFalta;
-    const included   = isProvisionIncludedForMonth(ym, 'fixo', p.id);
+    const autoFalta = Math.max(0, p.value - pago);
+    const manualVal = getProvisionManual(ym, 'fixo', p.id);
+    const hasManual = manualVal !== undefined;
+    const falta     = hasManual ? manualVal : autoFalta;
+    const included  = isProvisionIncludedForMonth(ym, 'fixo', p.id);
     return { id: p.id, desc: p.desc, planejado: p.value, pago, autoFalta, falta, hasManual, included };
   }).filter(x => x.autoFalta > 0 || x.hasManual);
 
   const provisoesVar = categories.map(cat => {
     const gasto     = list.filter(t => t.type === 'variavel' && t.cat === cat.id).reduce((a, t) => a + t.value, 0);
     const autoFalta = Math.max(0, cat.budget - gasto);
-    const hasManual = typeof cat.provisaoManual === 'number';
-    const falta     = hasManual ? cat.provisaoManual : autoFalta;
+    const manualVal = getProvisionManual(ym, 'variavel', cat.id);
+    const hasManual = manualVal !== undefined;
+    const falta     = hasManual ? manualVal : autoFalta;
     const included  = isProvisionIncludedForMonth(ym, 'variavel', cat.id);
     return { id: cat.id, desc: cat.name, color: cat.color, orcamento: cat.budget, gasto, autoFalta, falta, hasManual, included };
   }).filter(x => x.autoFalta > 0 || x.hasManual);
@@ -2217,26 +2297,27 @@ function computeProvisions() {
   return computeProvisionsForMonth(currentMonth);
 }
 
-// Atualiza (ou limpa, se o campo for esvaziado) o valor manual de provisão de um item.
+// Atualiza o valor manual de provisão de um item — independente por mês.
+// Se rawValue for '' ou NaN, remove o override e volta ao automático (planejado − gasto).
 function setProvisionManualValue(kind, id, rawValue) {
   const v = rawValue === '' ? NaN : parseFloat(rawValue);
-  if (kind === 'receita') {
-    const p = planned.receita.find(x => x.id === id);
-    if (!p) return;
-    if (isNaN(v)) delete p.provisaoManual; else p.provisaoManual = Math.max(0, v);
-    save(KEYS.planned, planned);
-  } else if (kind === 'fixo') {
-    const p = planned.fixo.find(x => x.id === id);
-    if (!p) return;
-    if (isNaN(v)) delete p.provisaoManual; else p.provisaoManual = Math.max(0, v);
-    save(KEYS.planned, planned);
+  if (!provisionToggles[currentMonth]) provisionToggles[currentMonth] = { receita:{}, fixo:{}, variavel:{}, manual:{} };
+  const ms = provisionToggles[currentMonth];
+  if (!ms.manual) ms.manual = {};
+  if (!ms.manual[kind]) ms.manual[kind] = {};
+  if (isNaN(v)) {
+    delete ms.manual[kind][id]; // volta ao automático neste mês
   } else {
-    const cat = categories.find(x => x.id === id);
-    if (!cat) return;
-    if (isNaN(v)) delete cat.provisaoManual; else cat.provisaoManual = Math.max(0, v);
-    save(KEYS.categories, categories);
+    ms.manual[kind][id] = Math.max(0, v);
   }
+  save(KEYS.provisionToggles, provisionToggles);
+  driveSyncNow();
   renderBalanco();
+}
+
+// Limpa o override manual deste mês (botão "↺ auto") — outros meses não são afetados.
+function resetProvisionManualValue(kind, id) {
+  setProvisionManualValue(kind, id, '');
 }
 
 // ═══════════════════ CDI (Banco Central do Brasil) ═══════════════════
@@ -2818,12 +2899,15 @@ function renderBalanco() {
         </div>
         <div style="text-align:right;flex-shrink:0">
           <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;white-space:nowrap">Ainda vou receber</div>
-          <input type="number" class="prov-manual-input" step="0.01" min="0"
-            value="${p.falta.toFixed(2)}"
-            onchange="setProvisionManualValue('receita','${p.id}', this.value)"
-            onkeydown="if(event.key==='Enter') this.blur()"
-            style="background:var(--surface2);border:1px solid ${p.hasManual ? 'var(--gold)' : 'var(--border)'};color:var(--text);padding:5px 8px;border-radius:6px;font-family:var(--mono);font-size:12px;width:96px;text-align:right">
-          <div style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-top:3px">${p.hasManual ? `orçado: ${fmt(p.autoFalta)}` : `${pct}% recebido`}</div>
+          <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end">
+            <input type="number" class="prov-manual-input" step="0.01" min="0"
+              value="${p.falta.toFixed(2)}"
+              onchange="setProvisionManualValue('receita','${p.id}', this.value)"
+              onkeydown="if(event.key==='Enter') this.blur()"
+              style="background:var(--surface2);border:1px solid ${p.hasManual ? 'var(--gold)' : 'var(--border)'};color:var(--text);padding:5px 8px;border-radius:6px;font-family:var(--mono);font-size:12px;width:96px;text-align:right">
+            ${p.hasManual ? `<button onclick="resetProvisionManualValue('receita','${p.id}')" title="Voltar ao automático (planejado − recebido)" style="background:none;border:1px solid var(--gold);color:var(--gold);border-radius:4px;padding:3px 5px;cursor:pointer;font-size:10px;line-height:1;flex-shrink:0">↺</button>` : ''}
+          </div>
+          <div style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-top:3px">${p.hasManual ? `auto seria: ${fmt(p.autoFalta)}` : `${pct}% recebido`}</div>
         </div>
       </div>`;
     });
@@ -2848,12 +2932,15 @@ function renderBalanco() {
         </div>
         <div style="text-align:right;flex-shrink:0">
           <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;white-space:nowrap">Ainda vou gastar</div>
-          <input type="number" class="prov-manual-input" step="0.01" min="0"
-            value="${p.falta.toFixed(2)}"
-            onchange="setProvisionManualValue('fixo','${p.id}', this.value)"
-            onkeydown="if(event.key==='Enter') this.blur()"
-            style="background:var(--surface2);border:1px solid ${p.hasManual ? 'var(--gold)' : 'var(--border)'};color:var(--text);padding:5px 8px;border-radius:6px;font-family:var(--mono);font-size:12px;width:96px;text-align:right">
-          <div style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-top:3px">${p.hasManual ? `orçado: ${fmt(p.autoFalta)}` : `${pct}% pago`}</div>
+          <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end">
+            <input type="number" class="prov-manual-input" step="0.01" min="0"
+              value="${p.falta.toFixed(2)}"
+              onchange="setProvisionManualValue('fixo','${p.id}', this.value)"
+              onkeydown="if(event.key==='Enter') this.blur()"
+              style="background:var(--surface2);border:1px solid ${p.hasManual ? 'var(--gold)' : 'var(--border)'};color:var(--text);padding:5px 8px;border-radius:6px;font-family:var(--mono);font-size:12px;width:96px;text-align:right">
+            ${p.hasManual ? `<button onclick="resetProvisionManualValue('fixo','${p.id}')" title="Voltar ao automático (planejado − pago)" style="background:none;border:1px solid var(--gold);color:var(--gold);border-radius:4px;padding:3px 5px;cursor:pointer;font-size:10px;line-height:1;flex-shrink:0">↺</button>` : ''}
+          </div>
+          <div style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-top:3px">${p.hasManual ? `auto seria: ${fmt(p.autoFalta)}` : `${pct}% pago`}</div>
         </div>
       </div>`;
     });
@@ -2880,12 +2967,15 @@ function renderBalanco() {
         </div>
         <div style="text-align:right;flex-shrink:0">
           <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;white-space:nowrap">Ainda vou gastar</div>
-          <input type="number" class="prov-manual-input" step="0.01" min="0"
-            value="${p.falta.toFixed(2)}"
-            onchange="setProvisionManualValue('variavel','${p.id}', this.value)"
-            onkeydown="if(event.key==='Enter') this.blur()"
-            style="background:var(--surface2);border:1px solid ${p.hasManual ? 'var(--gold)' : 'var(--border)'};color:var(--text);padding:5px 8px;border-radius:6px;font-family:var(--mono);font-size:12px;width:96px;text-align:right">
-          <div style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-top:3px">${p.hasManual ? `orçado: ${fmt(p.autoFalta)}` : `${pct}% usado`}</div>
+          <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end">
+            <input type="number" class="prov-manual-input" step="0.01" min="0"
+              value="${p.falta.toFixed(2)}"
+              onchange="setProvisionManualValue('variavel','${p.id}', this.value)"
+              onkeydown="if(event.key==='Enter') this.blur()"
+              style="background:var(--surface2);border:1px solid ${p.hasManual ? 'var(--gold)' : 'var(--border)'};color:var(--text);padding:5px 8px;border-radius:6px;font-family:var(--mono);font-size:12px;width:96px;text-align:right">
+            ${p.hasManual ? `<button onclick="resetProvisionManualValue('variavel','${p.id}')" title="Voltar ao automático (orçado − gasto)" style="background:none;border:1px solid var(--gold);color:var(--gold);border-radius:4px;padding:3px 5px;cursor:pointer;font-size:10px;line-height:1;flex-shrink:0">↺</button>` : ''}
+          </div>
+          <div style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-top:3px">${p.hasManual ? `auto seria: ${fmt(p.autoFalta)}` : `${pct}% usado`}</div>
         </div>
       </div>`;
     });
