@@ -1304,7 +1304,8 @@ const DRIVE = {
   FILE_NAME:  'financas_sync.json',
   FILE_KEY:   'cf_driveFileId',
   TOKEN_KEY:  'cf_driveToken',
-  LOCAL_CHANGE_KEY: 'cf_lastLocalChange', // timestamp (ms) da última alteração local ainda não confirmada no Drive
+  LOCAL_CHANGE_KEY: 'cf_lastLocalChange',
+  EVER_SYNCED_KEY:  'cf_everSynced', // set after first successful sync on this device
 };
 
 // Variáveis de estado do Drive — declaradas aqui (antes de qualquer save()) para evitar TDZ
@@ -3393,6 +3394,7 @@ function driveStatusClick() {
     _driveFileId = null;
     localStorage.removeItem(DRIVE.FILE_KEY);
     localStorage.removeItem(DRIVE.TOKEN_KEY);
+    localStorage.removeItem(DRIVE.EVER_SYNCED_KEY);
     driveSetStatus('idle', '☁ Drive: clique para conectar');
     toast('Drive desconectado.');
   } else {
@@ -3484,9 +3486,18 @@ function driveLogin() {
 }
 
 // ── Após login: busca arquivo existente ou cria novo ──
+// Três situações possíveis:
+//  A) Reconexão neste dispositivo (já sincronizou antes): auto-sync sem perguntar.
+//     Sobe local se local é mais novo; baixa Drive se Drive é mais novo.
+//  B) Novo dispositivo / primeira vez, mas local está vazio (sem transações manuais):
+//     Baixa do Drive automaticamente — é o caso "abri no notebook, quero meus dados".
+//  C) Novo dispositivo com dados locais reais que nunca foram para o Drive:
+//     Mostra modal para o usuário decidir (conflito real).
 async function driveLoadOrInit() {
   driveSetStatus('saving', '☁ Drive: verificando…');
   try {
+    const everSynced = !!localStorage.getItem(DRIVE.EVER_SYNCED_KEY);
+
     if (!_driveFileId) {
       const found = await driveFindFile();
       if (found) _driveFileId = found;
@@ -3495,33 +3506,52 @@ async function driveLoadOrInit() {
     if (_driveFileId) {
       const remote = await driveDownload(_driveFileId);
       if (remote) {
-        const localChangeAt  = parseInt(localStorage.getItem(DRIVE.LOCAL_CHANGE_KEY) || '0', 10);
-        const remoteSavedAt  = remote._savedAt ? new Date(remote._savedAt).getTime() : 0;
+        const localChangeAt = parseInt(localStorage.getItem(DRIVE.LOCAL_CHANGE_KEY) || '0', 10);
+        const remoteSavedAt = remote._savedAt ? new Date(remote._savedAt).getTime() : 0;
 
-        // Caso 1: mudança local que ocorreu DEPOIS do último save no Drive
-        // (ex: desmarcou provisão e recarregou antes dos 2s do debounce) → sobe local sem perguntar,
-        // pois não é uma "primeira conexão" — o usuário já havia sincronizado antes.
-        if (localChangeAt > remoteSavedAt && remoteSavedAt > 0) {
-          await driveUpload(_driveFileId, buildPayload());
-          localStorage.removeItem(DRIVE.LOCAL_CHANGE_KEY);
-          driveSetStatus('ok', '☁ Drive: sincronizado ✓');
-          toast('Alteração local enviada ao Drive!');
+        // ── A) Reconexão: este dispositivo já sincronizou antes ──
+        // Compara timestamps e sincroniza automaticamente.
+        if (everSynced) {
+          if (localChangeAt > remoteSavedAt) {
+            // Local é mais novo (ex: editou offline ou o debounce não terminou antes do reload)
+            await driveUpload(_driveFileId, buildPayload());
+            localStorage.removeItem(DRIVE.LOCAL_CHANGE_KEY);
+            driveSetStatus('ok', '☁ Drive: sincronizado ✓');
+            toast('Alteração local enviada ao Drive!');
+          } else {
+            // Drive é mais novo (editou em outro dispositivo) → puxa Drive
+            applyRemoteData(remote);
+            driveSetStatus('ok', '☁ Drive: sincronizado ✓');
+            toast('Dados atualizados do Drive!');
+          }
           return;
         }
 
-        // Caso 2: primeira conexão com o Drive (ou primeiro acesso neste dispositivo) —
-        // pode haver dados locais criados antes de conectar. Pergunta ao usuário o que fazer.
-        driveSetStatus('idle', '☁ Drive: aguardando escolha…');
-        showDriveMergeModal(remote, remoteSavedAt);
+        // ── B/C) Primeiro sync neste dispositivo ──
+        const localTxCount = Object.values(transactions).reduce((s, v) => s + v.length, 0);
+
+        if (localTxCount === 0) {
+          // B) Local vazio → baixa do Drive sem perguntar (caso "novo dispositivo")
+          applyRemoteData(remote);
+          localStorage.setItem(DRIVE.EVER_SYNCED_KEY, '1');
+          localStorage.setItem(DRIVE.FILE_KEY, _driveFileId);
+          driveSetStatus('ok', '☁ Drive: sincronizado ✓');
+          toast('Dados carregados do Drive!');
+        } else {
+          // C) Local tem dados reais → conflito real, pergunta ao usuário
+          driveSetStatus('idle', '☁ Drive: aguardando escolha…');
+          showDriveMergeModal(remote, remoteSavedAt);
+        }
         return;
       }
     }
 
-    // Arquivo não existe ainda no Drive: envia os dados locais e pronto.
+    // Arquivo não existe ainda no Drive → sobe local e marca como sincronizado.
     const id = await driveUpload(null, buildPayload());
     if (id) {
       _driveFileId = id;
       localStorage.setItem(DRIVE.FILE_KEY, id);
+      localStorage.setItem(DRIVE.EVER_SYNCED_KEY, '1');
       localStorage.removeItem(DRIVE.LOCAL_CHANGE_KEY);
       driveSetStatus('ok', '☁ Drive: sincronizado ✓');
       toast('Dados enviados ao Drive!');
@@ -3610,6 +3640,7 @@ function showDriveMergeModal(remote, remoteSavedAt) {
       await driveUpload(_driveFileId, buildPayload());
       localStorage.removeItem(DRIVE.LOCAL_CHANGE_KEY);
       localStorage.setItem(DRIVE.FILE_KEY, _driveFileId);
+      localStorage.setItem(DRIVE.EVER_SYNCED_KEY, '1');
       driveSetStatus('ok', '☁ Drive: sincronizado ✓');
       toast('Dados locais enviados ao Drive!');
     } catch {
@@ -3621,6 +3652,7 @@ function showDriveMergeModal(remote, remoteSavedAt) {
     modal.remove();
     applyRemoteData(remote);
     localStorage.setItem(DRIVE.FILE_KEY, _driveFileId);
+    localStorage.setItem(DRIVE.EVER_SYNCED_KEY, '1');
     driveSetStatus('ok', '☁ Drive: sincronizado ✓');
     toast('Dados do Drive carregados!');
   };
@@ -3740,7 +3772,8 @@ async function driveSyncNow() {
   driveSetStatus('saving', '☁ Drive: salvando…');
   try {
     await driveUpload(_driveFileId, buildPayload());
-    localStorage.removeItem(DRIVE.LOCAL_CHANGE_KEY); // confirmado no Drive — nada mais pendente
+    localStorage.removeItem(DRIVE.LOCAL_CHANGE_KEY);
+    localStorage.setItem(DRIVE.EVER_SYNCED_KEY, '1');
     driveSetStatus('ok', '☁ Salvo ✓ ' + new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}));
   } catch (err) {
     console.error('Drive save error:', err);
