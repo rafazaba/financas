@@ -1005,101 +1005,36 @@
     <div class="card-sub">Quanto pode gastar livremente</div>
   </div></div>
 
-  <!-- três BPs lado a lado -->
+  <!-- quatro BPs: Atual | Projetado | Proj.+Próx.Meses | Por Ritmo -->
   <div class="grid-3" style="margin-bottom:16px;align-items:start">
     <div>
       <div class="section-title">BP Atual — <span id="balDateLabel">17/06/2026</span></div>
-      <div class="table-wrap" id="balTable">
-      <div class="bal-block">
-        <div class="bal-col-ativo">
-          <div class="bal-section">
-            <div class="bal-header">ATIVO</div>
-            <div class="dre-row">
-              <div class="dre-label">Circulante — Caixa / Conta</div>
-              <div class="dre-val" style="color:var(--green)">R$ 4.832,83</div>
-            </div>
-            <div class="dre-row">
-              <div class="dre-label">Não Circulante — Investimentos / Bens</div>
-              <div class="dre-val blue">R$ 0,00</div>
-            </div>
-            <div class="dre-row subtotal" style="margin-top:auto">
-              <div class="dre-label">Total do Ativo</div>
-              <div class="dre-val">R$ 4.832,83</div>
-            </div>
-          </div>
-        </div>
-        <div class="bal-col-pp">
-          <div class="bal-section">
-            <div class="bal-header">PASSIVO</div>
-            <div class="dre-row"><div class="dre-label" style="color:var(--muted)">Sem passivos</div><div class="dre-val">—</div></div>
-            <div class="dre-row subtotal">
-              <div class="dre-label">Total do Passivo</div>
-              <div class="dre-val red">R$ 0,00</div>
-            </div>
-          </div>
-          <div class="bal-section">
-            <div class="bal-header">PATRIMÔNIO LÍQUIDO</div>
-            <div class="dre-row total">
-              <div class="dre-label">PL = Ativo − Passivo</div>
-              <div class="dre-val" style="color:var(--green)">R$ 4.832,83</div>
-            </div>
-          </div>
-        </div>
-      </div></div>
+      <div class="table-wrap" id="balTable"></div>
     </div>
     <div>
       <div class="section-title">BP Projetado — fim de <span id="balMonthLabel">Jun 2026</span></div>
-      <div class="table-wrap" id="balProjectedTable">
-      <div class="bal-block">
-        <div class="bal-col-ativo">
-          <div class="bal-section">
-            <div class="bal-header">ATIVO</div>
-            <div class="dre-row">
-              <div class="dre-label">Circulante — Caixa / Conta</div>
-              <div class="dre-val" style="color:var(--green)">R$ 4.894,79</div>
-            </div>
-            <div class="dre-row">
-              <div class="dre-label">Não Circulante — Investimentos / Bens</div>
-              <div class="dre-val blue">R$ 0,00</div>
-            </div>
-            <div class="dre-row subtotal" style="margin-top:auto">
-              <div class="dre-label">Total do Ativo</div>
-              <div class="dre-val">R$ 4.894,79</div>
-            </div>
-          </div>
-        </div>
-        <div class="bal-col-pp">
-          <div class="bal-section">
-            <div class="bal-header">PASSIVO</div>
-            <div class="dre-row" style="background:rgba(245,158,11,.05)">
-            <div class="dre-label" style="color:var(--gold)">Provisões — Despesas a Pagar</div>
-            <div class="dre-val" style="color:var(--gold)">R$ 2.457,45</div>
-           </div>
-           <div class="dre-row" style="font-size:11px">
-            <div class="dre-label" style="color:var(--muted);padding-left:12px">↳ Receitas a receber (abate do caixa proj.)</div>
-            <div class="dre-val" style="color:var(--green);font-size:11px">+R$ 61,96</div>
-           </div>
-            <div class="dre-row subtotal">
-              <div class="dre-label">Total do Passivo</div>
-              <div class="dre-val red">R$ 2.457,45</div>
-            </div>
-          </div>
-          <div class="bal-section">
-            <div class="bal-header">PATRIMÔNIO LÍQUIDO</div>
-            <div class="dre-row total">
-              <div class="dre-label">PL = Ativo − Passivo</div>
-              <div class="dre-val" style="color:var(--green)">R$ 2.437,34</div>
-            </div>
-          </div>
-        </div>
-      </div></div>
+      <div class="table-wrap" id="balProjectedTable"></div>
     </div>
     <div>
       <div class="section-title">BP Projetado + Próx. Meses</div>
       <div class="table-wrap" id="balProjectedFutureTable">
-      <div class="empty-state">Calculando…</div>
+        <div class="empty-state">Calculando…</div>
       </div>
     </div>
+  </div>
+  <div class="grid-2" style="margin-bottom:16px;align-items:start">
+    <div>
+      <div class="section-title">BP Por Ritmo — projeção se o ritmo atual continuar</div>
+      <div style="font-size:11px;color:var(--muted);margin:-4px 0 10px">
+        Extrapola os gastos variáveis realizados até hoje para o fim do mês,
+        usando o mesmo ritmo diário (ou por dias úteis, se marcado na categoria).
+        Fixos planejados e receitas do BP Projetado são mantidos.
+      </div>
+      <div class="table-wrap" id="balPaceTable">
+        <div class="empty-state">Calculando…</div>
+      </div>
+    </div>
+    <div id="balPaceDetail" style="font-size:12px;color:var(--muted)"></div>
   </div>
 
   <!-- detalhamento das provisões -->
@@ -1385,7 +1320,7 @@ function seedCategories() {
   return [
     { id: SEED.cFesta,    name: 'Festa',       budget:  200.00, color: '#8B5CF6' },
     { id: SEED.cGasolina, name: 'Gasolina',    budget: 1000.00, color: '#F59E0B' },
-    { id: SEED.cAlmoco,   name: 'Almoço FGA',  budget:  800.00, color: '#3B82F6' },
+    { id: SEED.cAlmoco,   name: 'Almoço FGA',  budget:  800.00, color: '#3B82F6', workdayPace: true },
     { id: SEED.cAlim,     name: 'Alimentação', budget: 1000.00, color: '#10B981' },
     { id: SEED.cMercado,  name: 'Mercado',     budget:  200.00, color: '#06B6D4' },
     { id: SEED.cExtras,   name: 'Extras',      budget:  600.00, color: '#EF4444' },
@@ -1746,7 +1681,7 @@ function renderCategoriesTable() {
   const el = document.getElementById('categoriesTable');
   if (!categories.length) { el.innerHTML = `<div class="empty-state">Nenhuma categoria.</div>`; return; }
   el.innerHTML = `<table>
-    <thead><tr><th>Cor</th><th>Categoria</th><th style="text-align:right">Orçamento</th><th style="text-align:right">Gasto no mês</th><th></th></tr></thead>
+    <thead><tr><th>Cor</th><th>Categoria</th><th style="text-align:right">Orçamento</th><th style="text-align:right">Gasto no mês</th><th title="Usar dias úteis para o limite de ritmo no gráfico">Dias úteis</th><th></th></tr></thead>
     <tbody>${categories.map(c=>{
       const spent = txList().filter(t=>t.type==='variavel'&&t.cat===c.id).reduce((a,t)=>a+t.value,0);
       const pct = c.budget > 0 ? Math.min(100, spent/c.budget*100).toFixed(0) : 0;
@@ -1761,10 +1696,24 @@ function renderCategoriesTable() {
             onkeydown="if(event.key==='Enter') this.blur()">
         </td>
         <td class="mono" style="text-align:right;color:${over?'var(--red)':'var(--green)'}">${fmt(spent)} <span style="font-size:10px;color:var(--muted)">(${pct}%)</span></td>
+        <td style="text-align:center">
+          <input type="checkbox" ${c.workdayPace ? 'checked' : ''}
+            onchange="toggleWorkdayPace('${c.id}', this.checked)"
+            title="Calcular limite de ritmo por dias úteis (seg–sex)"
+            style="accent-color:var(--blue);cursor:pointer">
+        </td>
         <td><button class="btn btn-red btn-sm" onclick="deleteCategory('${c.id}')">✕</button></td>
       </tr>`;
     }).join('')}</tbody>
   </table>`;
+}
+
+function toggleWorkdayPace(id, value) {
+  const cat = categories.find(x => x.id === id);
+  if (!cat) return;
+  cat.workdayPace = value;
+  save(KEYS.categories, categories);
+  renderChartVariable();
 }
 
 function updateCategoryBudget(id, rawValue) {
@@ -1964,47 +1913,78 @@ function renderChartIncomeExpense() {
   });
 }
 
+// Conta dias úteis (seg–sex) num mês inteiro
+function workdaysInMonth(ym) {
+  const [y, m] = ym.split('-').map(Number);
+  const dim = daysInMonth(ym);
+  let count = 0;
+  for (let d = 1; d <= dim; d++) {
+    const dow = new Date(y, m - 1, d).getDay();
+    if (dow !== 0 && dow !== 6) count++;
+  }
+  return count;
+}
+// Conta dias úteis (seg–sex) desde o 1º do mês até o dia `upToDay` (inclusive)
+function workdaysUpTo(ym, upToDay) {
+  const [y, m] = ym.split('-').map(Number);
+  let count = 0;
+  for (let d = 1; d <= upToDay; d++) {
+    const dow = new Date(y, m - 1, d).getDay();
+    if (dow !== 0 && dow !== 6) count++;
+  }
+  return count;
+}
+
 function renderChartVariable() {
   destroyChart('variable');
   const data = categories.map(c=>{
     const spent = txList().filter(t=>t.type==='variavel'&&t.cat===c.id).reduce((a,t)=>a+t.value,0);
-    return { name: c.name, spent, budget: c.budget, color: c.color };
+    return { id: c.id, name: c.name, spent, budget: c.budget, color: c.color, workdayPace: c.workdayPace || false };
   }).filter(x=>x.budget>0||x.spent>0);
   if (!data.length) return;
 
-  // % do mês atual que já correu: se o mês observado é o corrente, usa o dia de hoje;
-  // se é passado, pro-rata = 1 (mês fechado); se é futuro, pro-rata = 0.
-  const today = new Date();
-  const [cy, cm] = currentMonth.split('-').map(Number);
+  const today   = new Date();
   const todayYM = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
-  let prorata = 0;
-  if (currentMonth < todayYM) {
-    prorata = 1;
-  } else if (currentMonth === todayYM) {
-    const dim = daysInMonth(currentMonth);
-    prorata = today.getDate() / dim;
+
+  // Pro-rata geral (dias corridos) — usado para categorias normais
+  let prorataCalendar = 0;
+  if (currentMonth < todayYM)      prorataCalendar = 1;
+  else if (currentMonth === todayYM) prorataCalendar = today.getDate() / daysInMonth(currentMonth);
+
+  // Pro-rata por dias úteis — para categorias com flag workdayPace (ex: Almoço FGA)
+  let prorataWorkday = 0;
+  if (currentMonth < todayYM)      prorataWorkday = 1;
+  else if (currentMonth === todayYM) {
+    const totalWd   = workdaysInMonth(currentMonth);
+    const elapsedWd = workdaysUpTo(currentMonth, today.getDate());
+    prorataWorkday  = totalWd > 0 ? elapsedWd / totalWd : 0;
   }
-  const paceValues = data.map(x => parseFloat((x.budget * prorata).toFixed(2)));
-  const paceLabel  = currentMonth === todayYM
-    ? `Limite até hoje (${Math.round(prorata*100)}% do mês)`
+
+  // Cada categoria usa seu próprio pro-rata
+  const paceValues = data.map(x => {
+    const pr = x.workdayPace ? prorataWorkday : prorataCalendar;
+    return parseFloat((x.budget * pr).toFixed(2));
+  });
+
+  const isCurrent = currentMonth === todayYM;
+  const paceLabel = isCurrent
+    ? `Limite até hoje`
     : currentMonth < todayYM ? 'Limite (mês encerrado)' : '—';
 
   const ctx = document.getElementById('chartVariable').getContext('2d');
   charts['variable'] = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: data.map(x=>x.name),
+      labels: data.map(x => x.name),
       datasets: [
         {
           label: 'Gasto',
-          data: data.map(x=>x.spent),
-          backgroundColor: data.map(x=>x.color+'bb'),
+          data: data.map(x => x.spent),
+          backgroundColor: data.map(x => x.color+'bb'),
           borderRadius: 5,
           order: 1,
         },
         {
-          // Linha de ritmo pro-rata: quanto você poderia ter gasto até hoje dado o % do mês.
-          // Renderizada como barras minúsculas (tipo "marcador") em cima do gráfico horizontal.
           label: paceLabel,
           data: paceValues,
           backgroundColor: 'transparent',
@@ -2018,9 +1998,9 @@ function renderChartVariable() {
         },
         {
           label: 'Orçamento',
-          data: data.map(x=>x.budget),
-          backgroundColor: data.map(x=>x.color+'22'),
-          borderColor: data.map(x=>x.color+'66'),
+          data: data.map(x => x.budget),
+          backgroundColor: data.map(x => x.color+'22'),
+          borderColor: data.map(x => x.color+'66'),
           borderWidth: 1,
           borderRadius: 5,
           order: 3,
@@ -2035,15 +2015,20 @@ function renderChartVariable() {
         tooltip: {
           callbacks: {
             afterBody(items) {
-              // mostra a diferença entre o gasto e o limite pro-rata na tooltip
               const idx = items[0]?.dataIndex;
-              if (idx === undefined || prorata === 0) return [];
-              const spent = data[idx].spent;
+              if (idx === undefined) return [];
+              const cat   = data[idx];
+              const pr    = cat.workdayPace ? prorataWorkday : prorataCalendar;
+              if (pr === 0) return [];
+              const spent = cat.spent;
               const pace  = paceValues[idx];
               const diff  = spent - pace;
-              if (diff > 0) return [`⚠ R$ ${diff.toFixed(2)} acima do ritmo`];
-              if (diff < 0) return [`✓ R$ ${Math.abs(diff).toFixed(2)} abaixo do ritmo`];
-              return ['= No ritmo'];
+              const label = cat.workdayPace
+                ? `(ritmo: dias úteis, ${Math.round(pr*100)}% do mês)`
+                : `(ritmo: dias corridos, ${Math.round(pr*100)}% do mês)`;
+              if (diff > 0) return [`⚠ R$ ${diff.toFixed(2)} acima do ritmo`, label];
+              if (diff < 0) return [`✓ R$ ${Math.abs(diff).toFixed(2)} abaixo do ritmo`, label];
+              return ['= No ritmo', label];
             }
           }
         }
@@ -2843,13 +2828,87 @@ function renderBalanco() {
   renderBP('balProjectedFutureTable', caixaProjetado, ativoProjetadoFuturo, passivoProjetadoFuturo, plProjetadoFuturo,
     ativoAReceberFuturoMesesHTML, provPassivoHTML + passivoFuturoMesesHTML);
 
+  // ── BP POR RITMO ────────────────────────────────────────────────────────────────
+  // Para meses em andamento: extrapola os gastos variáveis realizados até hoje para o
+  // fim do mês usando o ritmo diário (ou de dias úteis, conforme a flag da categoria).
+  // Para meses já encerrados: BP Projetado é igual ao BP Por Ritmo (ritmo = 100%).
+  // Para meses futuros: não há ritmo ainda → mostra BP Projetado (sem gastos realizados).
+  const todayYM    = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+  const dim        = daysInMonth(currentMonth);
+  const dayToday   = today.getDate();
+
+  let paceExtraVarPassivo = 0;      // quanto mais de variável vai ser gasto até fim do mês
+  let paceDetailRows      = '';     // HTML para o painel de detalhe
+  const isCurrent = currentMonth === todayYM;
+  const isPast    = currentMonth < todayYM;
+
+  if (isCurrent && dayToday < dim) {
+    // Para cada categoria variável, calcula o ritmo diário real (gasto ÷ dias/dias-úteis decorridos)
+    // e projeta o total até o fim do mês.
+    const totalWdMonth   = workdaysInMonth(currentMonth);
+    const elapsedWd      = workdaysUpTo(currentMonth, dayToday);
+
+    paceDetailRows = `<div class="bal-header" style="margin-bottom:6px">Projeção por Categoria</div>`;
+    categories.forEach(cat => {
+      const gasto = list.filter(t => t.type === 'variavel' && t.cat === cat.id).reduce((a, t) => a + t.value, 0);
+      if (gasto === 0 && cat.budget === 0) return;
+
+      let projected;
+      if (cat.workdayPace) {
+        // ritmo por dias úteis: gasto ÷ dias-úteis-decorridos × dias-úteis-totais
+        projected = elapsedWd > 0 ? gasto / elapsedWd * totalWdMonth : gasto;
+      } else {
+        // ritmo por dias corridos: gasto ÷ dia-atual × dias-no-mês
+        projected = dayToday > 0 ? gasto / dayToday * dim : gasto;
+      }
+      projected = Math.max(projected, gasto); // nunca projetar abaixo do já gasto
+      const extra = projected - gasto;
+      paceExtraVarPassivo += extra;
+      const overBudget = projected > cat.budget;
+      paceDetailRows += `<div class="dre-row">
+        <div class="dre-label">
+          <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${cat.color};margin-right:5px;flex-shrink:0;vertical-align:middle"></span>
+          ${cat.name}${cat.workdayPace ? ' <span style="font-size:9px;color:var(--blue);opacity:.8">(dias úteis)</span>' : ''}
+          <div style="font-size:10px;color:var(--muted);font-family:var(--mono)">${fmt(gasto)} gasto → proj. ${fmt(projected)}${overBudget ? ` <span style="color:var(--red)">▲ acima do orçamento</span>` : ''}</div>
+        </div>
+        <div class="dre-val" style="color:${overBudget?'var(--red)':'var(--green)'}">+${fmt(extra)}</div>
+      </div>`;
+    });
+    paceDetailRows += `<div class="dre-row subtotal">
+      <div class="dre-label">Total variáveis extras projetadas</div>
+      <div class="dre-val red">+${fmt(paceExtraVarPassivo)}</div>
+    </div>`;
+  }
+
+  // Caixa por ritmo = caixa projetado − gastos extras que ainda vêm
+  const caixaPace   = caixaProjetado - paceExtraVarPassivo;
+  const caixaAtivoP = Math.max(0, caixaPace);
+  const descobertoP = Math.max(0, -caixaPace);
+  const ativoPace   = caixaAtivoP + investimentos + reservaCarro;
+  const passivoPace = descobertoP + dividasManual + reservaCarroDeficit + passivoFuturo
+                    + (isPast ? 0 : totalProvisoes) + paceExtraVarPassivo;
+  const plPace      = ativoPace - passivoPace;
+
+  const paceExtraHTML = paceExtraVarPassivo > 0
+    ? `<div class="dre-row" style="background:rgba(239,68,68,.05)">
+        <div class="dre-label" style="color:var(--red)">Var. extras pelo ritmo atual</div>
+        <div class="dre-val" style="color:var(--red)">+${fmt(paceExtraVarPassivo)}</div>
+       </div>`
+    : '';
+  renderBP('balPaceTable', caixaPace, ativoPace, passivoPace, plPace, '',
+    (isPast ? '' : provPassivoHTML) + paceExtraHTML);
+
+  document.getElementById('balPaceDetail').innerHTML = isCurrent
+    ? paceDetailRows
+    : `<div style="color:var(--muted);font-size:11px;padding:8px 0">${isPast ? 'Mês encerrado — ritmo = 100%.' : 'Mês futuro — sem gastos realizados ainda.'}</div>`;
+
   // ── HEADLINE CARDS ──────────────────────────────────────────
   document.getElementById('balSummaryCards').innerHTML = [
     { label: 'PL Atual',           value: fmt(plAtual),     sub: 'Patrimônio hoje (já considera lançamentos futuros)', cls: plAtual     >= 0 ? 'green' : 'red' },
     { label: 'PL Projetado',       value: fmt(plProjetado), sub: `Após pagar tudo planejado até fim de ${ymToLabel(currentMonth)}`, cls: plProjetado >= 0 ? 'green' : 'red' },
+    { label: 'PL Por Ritmo',       value: fmt(plPace),      sub: 'Se o ritmo atual de gastos variáveis continuar', cls: plPace >= 0 ? 'green' : 'red' },
     { label: 'PL Proj. + Próx. Meses', value: fmt(plProjetadoFuturo), sub: 'Incluindo transações já lançadas em meses futuros', cls: plProjetadoFuturo >= 0 ? 'green' : 'red' },
     { label: 'A Pagar / A Receber',value: `${fmt(passivoFuturo)} / ${fmt(ativoAReceber)}`, sub: 'Transações futuras já lançadas (mês atual)', cls: 'blue' },
-    { label: 'Margem Disponível',  value: fmt(plProjetado), sub: 'Quanto pode gastar livremente',     cls: plProjetado >= 0 ? 'green' : 'red' },
   ].map(x => `<div class="card">
     <div class="card-label">${x.label}</div>
     <div class="card-value ${x.cls}">${x.value}</div>
@@ -2994,7 +3053,7 @@ function renderBalanco() {
     dividasManual, descoberto, descobertoProj, passivoFuturo,
     totalProvisoes, plAtual, plProjetado,
     ativoAReceberFuturoMeses, passivoFuturoMeses, plProjetadoFuturo,
-    reservaCarro, reservaCarroDeficit
+    reservaCarro, reservaCarroDeficit, plPace
   });
 }
 
