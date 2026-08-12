@@ -561,7 +561,14 @@
 <!-- ═══════════════════════ TRANSAÇÕES ═══════════════════════ -->
 <div id="page-transactions" class="page">
   <div class="form-box">
-    <div class="form-box-title">Nova Transação</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div class="form-box-title" style="margin:0">Nova Transação</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="downloadCsvTemplate()">⬇ Modelo CSV</button>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('csvImportFile').click()">📊 Importar Planilha</button>
+        <input type="file" id="csvImportFile" style="display:none" accept=".csv,.tsv,.txt" onchange="openCsvImportModal(event)">
+      </div>
+    </div>
     <div class="form-grid">
       <div class="form-group">
         <label>Data</label>
@@ -3895,8 +3902,281 @@ function toast(msg) {
 }
 
 // ═══════════════════ INIT ═══════════════════
+// ═══════════════════════════════════════════════════════════
+// IMPORTAÇÃO POR PLANILHA CSV
+// ═══════════════════════════════════════════════════════════
+
+// ── Gera e faz download do modelo CSV ─────────────────────
+function downloadCsvTemplate() {
+  const catOptions  = categories.map(c => c.name).join(' | ');
+  const fixoOptions = planned.fixo.map(p => p.desc).join(' | ');
+  const recOptions  = planned.receita.map(p => p.desc).join(' | ');
+
+  const content = `data,descricao,valor,tipo,categoria_ou_fixo,parcelas
+# INSTRUÇÕES:
+# - data: DD/MM/AAAA ou AAAA-MM-DD
+# - tipo: receita | fixo | variavel
+# - categoria_ou_fixo:
+#     se tipo=variavel  → ${catOptions}
+#     se tipo=fixo      → ${fixoOptions}
+#     se tipo=receita   → ${recOptions}
+# - parcelas: 1 (à vista) ou 2..60 (parcelado, distribui 1 por mês)
+# - linhas começando com # são ignoradas
+#
+# EXEMPLOS:
+15/06/2026,Almoço,35.90,variavel,Almoço FGA,1
+05/06/2026,Salário,2300.00,receita,Salário,1
+10/06/2026,Condomínio,445.12,fixo,Condomínio,1
+01/06/2026,Notebook,3600.00,variavel,Extras,12
+`;
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'modelo_transacoes.csv';
+  a.click();
+  toast('Modelo CSV baixado!');
+}
+
+// ── Resolve nome de categoria/planejado → ID ───────────────
+function resolveCatId(tipo, rawName) {
+  const name = (rawName || '').trim().toLowerCase();
+  if (tipo === 'variavel') {
+    const exact = categories.find(c => c.name.toLowerCase() === name);
+    if (exact) return { ok: true, id: exact.id, label: exact.name };
+    const fz = categories.find(c => c.name.toLowerCase().includes(name) || name.includes(c.name.toLowerCase()));
+    if (fz) return { ok: true, id: fz.id, label: fz.name, fuzzy: true };
+    return { ok: false, msg: `Categoria variável não encontrada: "${rawName}". Opções: ${categories.map(c=>c.name).join(', ')}` };
+  }
+  if (tipo === 'fixo') {
+    const exact = planned.fixo.find(p => p.desc.toLowerCase() === name);
+    if (exact) return { ok: true, id: exact.id, label: exact.desc };
+    const fz = planned.fixo.find(p => p.desc.toLowerCase().includes(name) || name.includes(p.desc.toLowerCase()));
+    if (fz) return { ok: true, id: fz.id, label: fz.desc, fuzzy: true };
+    return { ok: false, msg: `Fixo planejado não encontrado: "${rawName}". Opções: ${planned.fixo.map(p=>p.desc).join(', ')}` };
+  }
+  if (tipo === 'receita') {
+    const exact = planned.receita.find(p => p.desc.toLowerCase() === name);
+    if (exact) return { ok: true, id: exact.id, label: exact.desc };
+    const fz = planned.receita.find(p => p.desc.toLowerCase().includes(name) || name.includes(p.desc.toLowerCase()));
+    if (fz) return { ok: true, id: fz.id, label: fz.desc, fuzzy: true };
+    return { ok: true, id: 'r_outros', label: rawName, free: true };
+  }
+  return { ok: false, msg: `Tipo inválido: "${tipo}"` };
+}
+
+// ── Normaliza data → YYYY-MM-DD ────────────────────────────
+function parseImportDate(raw) {
+  const s = (raw || '').trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  return null;
+}
+
+// ── Parseia uma linha CSV respeitando aspas ────────────────
+function parseCsvLine(line, sep) {
+  const cols = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { inQ = !inQ; continue; }
+    if (ch === sep && !inQ) { cols.push(cur.trim()); cur = ''; continue; }
+    cur += ch;
+  }
+  cols.push(cur.trim());
+  return cols;
+}
+
+let _csvPendingRows = [];
+
+function openCsvImportModal(event) {
+  const file = event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => processCsvText(e.target.result, file.name);
+  reader.readAsText(file, 'UTF-8');
+}
+
+function processCsvText(text, filename) {
+  const firstData = text.split('\n').find(l => l.trim() && !l.trim().startsWith('#'));
+  const sep = (firstData && firstData.includes(';') && !firstData.includes(',')) ? ';' : ',';
+
+  const lines = text.split('\n').map((raw, i) => ({ raw, num: i + 1 }))
+    .filter(({ raw }) => raw.trim() && !raw.trim().startsWith('#'));
+
+  const firstCols = parseCsvLine(lines[0]?.raw || '', sep).map(c => c.toLowerCase());
+  const isHeader  = firstCols.some(c => ['data','date','descricao','valor','tipo','type'].includes(c));
+  const rows      = isHeader ? lines.slice(1) : lines;
+
+  const parsed = rows.map(({ raw, num }) => {
+    const cols = parseCsvLine(raw, sep);
+    const [rawDate, rawDesc, rawVal, rawTipo, rawCat, rawParc] = cols;
+    const errors = [], warnings = [];
+
+    const date = parseImportDate(rawDate);
+    if (!date) errors.push(`Data inválida: "${rawDate}"`);
+
+    const desc = (rawDesc || '').trim();
+    if (!desc) errors.push('Descrição vazia');
+
+    const value = parseFloat((rawVal || '').replace(',','.'));
+    if (isNaN(value) || value <= 0) errors.push(`Valor inválido: "${rawVal}"`);
+
+    const tipo = (rawTipo || '').trim().toLowerCase();
+    if (!['receita','fixo','variavel'].includes(tipo))
+      errors.push(`Tipo inválido: "${rawTipo}" — use receita, fixo ou variavel`);
+
+    let catId = '', catLabel = '';
+    if (['receita','fixo','variavel'].includes(tipo)) {
+      const res = resolveCatId(tipo, rawCat);
+      if (res.ok) {
+        catId = res.id; catLabel = res.label;
+        if (res.fuzzy) warnings.push(`Mapeado por similaridade: "${rawCat}" → "${res.label}"`);
+        if (res.free)  warnings.push(`Receita com nome livre: "${rawCat}"`);
+      } else {
+        errors.push(res.msg);
+      }
+    }
+
+    const installments = Math.max(1, Math.min(60, parseInt(rawParc || '1', 10) || 1));
+    return { num, date, desc, value, tipo, catId, catLabel, installments, errors, warnings };
+  }).filter(r => r.desc || r.errors.length);
+
+  const ok       = parsed.filter(r => !r.errors.length);
+  const bad      = parsed.filter(r =>  r.errors.length);
+  const withWarn = ok.filter(r => r.warnings.length);
+  _csvPendingRows = ok;
+
+  document.getElementById('csvImportSummary').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
+      <div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:22px;font-weight:700;color:var(--green)">${ok.length}</div>
+        <div style="font-size:11px;color:var(--muted)">prontas para importar</div>
+      </div>
+      <div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:22px;font-weight:700;color:var(--gold)">${withWarn.length}</div>
+        <div style="font-size:11px;color:var(--muted)">com avisos</div>
+      </div>
+      <div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:22px;font-weight:700;color:var(--red)">${bad.length}</div>
+        <div style="font-size:11px;color:var(--muted)">com erros (ignoradas)</div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--muted)">Arquivo: <strong>${filename}</strong> · Sep: <code>${sep===','?'vírgula':'ponto-e-vírgula'}</code>${isHeader?' · cabeçalho detectado':''}</div>`;
+
+  const allRows   = [...bad, ...ok].sort((a, b) => a.num - b.num);
+  const tbodyRows = allRows.map(r => {
+    const hasErr  = r.errors.length > 0;
+    const hasWarn = !hasErr && r.warnings.length > 0;
+    const bg = hasErr ? 'background:rgba(239,68,68,.07)' : hasWarn ? 'background:rgba(245,158,11,.07)' : '';
+    const tipoCls = r.tipo==='receita'?'color:var(--green)':r.tipo==='fixo'?'color:var(--blue)':'';
+    const msgs = [
+      ...r.errors.map(e=>`<div style="font-size:10px;color:var(--red)">✗ ${e}</div>`),
+      ...r.warnings.map(w=>`<div style="font-size:10px;color:var(--gold)">⚠ ${w}</div>`),
+    ].join('');
+    return `<tr style="${bg}">
+      <td style="font-size:10px;color:var(--muted);font-family:var(--mono);padding:5px 6px 5px 0">${r.num}</td>
+      <td style="font-size:11px;font-family:var(--mono);white-space:nowrap;padding:5px 6px">${r.date||'—'}</td>
+      <td style="font-size:12px;padding:5px 6px">${r.desc||'—'}${msgs}</td>
+      <td style="font-size:12px;font-family:var(--mono);text-align:right;white-space:nowrap;padding:5px 6px">${isNaN(r.value)?'—':fmt(r.value)}</td>
+      <td style="font-size:11px;${tipoCls};padding:5px 6px">${r.tipo||'—'}</td>
+      <td style="font-size:11px;color:var(--muted);padding:5px 6px">${r.catLabel||'—'}</td>
+      <td style="font-size:11px;color:var(--muted);text-align:center;padding:5px 6px">${r.installments>1?r.installments+'x':'—'}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('csvImportPreview').innerHTML = `
+    <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Preview (${allRows.length} linhas)</div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
+      <thead><tr style="border-bottom:1px solid var(--border)">
+        <th style="font-size:10px;color:var(--muted);padding:4px 6px 4px 0;text-align:left">#</th>
+        <th style="font-size:10px;color:var(--muted);padding:4px 6px;text-align:left">Data</th>
+        <th style="font-size:10px;color:var(--muted);padding:4px 6px;text-align:left">Descrição</th>
+        <th style="font-size:10px;color:var(--muted);padding:4px 6px;text-align:right">Valor</th>
+        <th style="font-size:10px;color:var(--muted);padding:4px 6px;text-align:left">Tipo</th>
+        <th style="font-size:10px;color:var(--muted);padding:4px 6px;text-align:left">Categoria</th>
+        <th style="font-size:10px;color:var(--muted);padding:4px 6px;text-align:center">Parcelas</th>
+      </tr></thead>
+      <tbody>${tbodyRows}</tbody>
+    </table></div>`;
+
+  const btn = document.getElementById('csvConfirmBtn');
+  btn.disabled    = ok.length === 0;
+  btn.style.opacity = ok.length === 0 ? '.4' : '1';
+  document.getElementById('csvImportModal').style.display = 'block';
+}
+
+function closeCsvImportModal() {
+  document.getElementById('csvImportModal').style.display = 'none';
+  _csvPendingRows = [];
+}
+
+function confirmCsvImport() {
+  if (!_csvPendingRows.length) return;
+  let lançamentos = 0;
+
+  _csvPendingRows.forEach(r => {
+    const installValue = parseFloat((r.value / r.installments).toFixed(2));
+    const groupId = uid();
+    const [y0, m0, d0] = r.date.split('-').map(Number);
+
+    for (let k = 0; k < r.installments; k++) {
+      let y = y0, m = m0 + k;
+      while (m > 12) { m -= 12; y++; }
+      const ym  = `${y}-${String(m).padStart(2,'0')}`;
+      const day = Math.min(d0, daysInMonth(ym));
+      const txDate = `${ym}-${String(day).padStart(2,'0')}`;
+
+      if (!transactions[ym]) transactions[ym] = [];
+      const label = r.installments > 1 ? `${r.desc} (${k+1}/${r.installments})` : r.desc;
+      transactions[ym].push({ id: uid(), groupId, date: txDate, desc: label, value: installValue, type: r.tipo, cat: r.catId });
+      transactions[ym].sort((a, b) => a.date.localeCompare(b.date));
+      lançamentos++;
+    }
+  });
+
+  save(KEYS.transactions, transactions);
+  if (typeof driveSyncNow === 'function') driveSyncNow();
+  const n = _csvPendingRows.length;
+  closeCsvImportModal();
+  renderAll();
+  toast(`${n} transaç${n > 1 ? 'ões importadas' : 'ão importada'} (${lançamentos} lançamento${lançamentos > 1 ? 's' : ''})!`);
+}
+
 renderAll();
 </script>
 
+
+<!-- ═══ MODAL: IMPORTAR PLANILHA ═══ -->
+<div id="csvImportModal" style="display:none;position:fixed;inset:0;z-index:998;background:rgba(0,0,0,.85);
+  backdrop-filter:blur(6px);overflow-y:auto;padding:20px">
+  <div style="max-width:720px;margin:auto;background:var(--surface);border:1px solid var(--border);
+    border-radius:14px;padding:28px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h2 style="font-size:15px;font-weight:700;color:var(--text);margin:0">📊 Importar Planilha CSV</h2>
+      <button onclick="closeCsvImportModal()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1">×</button>
+    </div>
+
+    <!-- resumo antes de confirmar -->
+    <div id="csvImportSummary" style="margin-bottom:14px"></div>
+
+    <!-- tabela de preview -->
+    <div id="csvImportPreview" style="max-height:340px;overflow-y:auto;margin-bottom:16px"></div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button id="csvConfirmBtn" onclick="confirmCsvImport()"
+        style="background:var(--green);color:#000;border:none;border-radius:8px;padding:10px 20px;
+               cursor:pointer;font-size:13px;font-weight:700">
+        ✓ Confirmar importação
+      </button>
+      <button onclick="closeCsvImportModal()"
+        style="background:var(--surface2);color:var(--text);border:1px solid var(--border);
+               border-radius:8px;padding:10px 20px;cursor:pointer;font-size:13px">
+        Cancelar
+      </button>
+    </div>
+  </div>
+</div>
 
 </body></html>
